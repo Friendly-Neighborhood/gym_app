@@ -1,4 +1,5 @@
 <?php
+include 'auth_check.php'; // Запрос логина и пароля
 // Database Connection
 $servername = "drbgz515.mysql.network:10501";
 $username = "gym_admin";
