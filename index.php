@@ -21,6 +21,21 @@ $result = $conn->query($sql);
 
 <!DOCTYPE html>
 <html lang="en">
+<nav class="navbar_index">
+    <div class="navbar-container">
+        <div class="logo">Gym Assistant</div>
+        <button class="mobile-nav-toggle" aria-label="Toggle navigation">
+            <span class="bar"></span>
+            <span class="bar"></span>
+            <span class="bar"></span>
+        </button>
+        <ul class="nav-links">
+            <li><a href="index.php">Главная</a></li>
+        </ul>
+    </div>
+</nav>
+<div class="overlay"></div>
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -29,8 +44,8 @@ $result = $conn->query($sql);
     <link rel="icon" type="image/png" href="icon.png">
 </head>
 <body>
-<h3 class="animated-text4"><span></span></h3>
-    <table border="1">
+<h1 class="page-bannerindex">Список клиентов</h1>
+    <table class="index_table" border="1">
         <tr>
             <th>ID телеграмма</th>
             <th>Имя клиента</th>
@@ -55,9 +70,9 @@ $result = $conn->query($sql);
         }
         ?>
     </table>
+    
 </body>
 </html>
-
 <?php
 $conn->close();
 ?>

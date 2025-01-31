@@ -1,5 +1,11 @@
 <?php
 include 'auth_check.php'; // Запрос логина и пароля
+
+if (!isset($_GET['tg_id']) || empty($_GET['tg_id'])) {
+    // Если нет, редиректим на главную страницу
+    header("Location: index.php");
+    exit();
+}
 // Database Connection
 $servername = "drbgz515.mysql.network:10501";
 $username = "gym_admin";
@@ -48,6 +54,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_changes'])) {
     } else {
         echo "<p>Ошибка обновления: " . $conn->error . "</p>";
     }
+    
+    
 }
 
 // Fetch user data
@@ -70,7 +78,7 @@ $age = $personal_info['age'] ?? 'Не указан';
 $height = $personal_info['height'] ?? 'Не указан';
 $weight = $personal_info['weight'] ?? 'Не указан';
 $gender = $personal_info['sex'] ?? 'Не указан';
-$additional_info = $personal_info['additional_info'] ?? 'Нет дополнительной информации';
+$additional_info = $personal_info['additional_info'];
 
 // Decode `nutritional_info`
 $nutrition_data = !empty($client['nutritional_info']) ? json_decode($client['nutritional_info'], true) : [];
@@ -90,8 +98,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_recommendations']
         "training_recommendation" => $training_recommendation
     ], JSON_UNESCAPED_UNICODE);
 
+    // ✅ Добавляем SQL-запрос
     $sql_update_recommendations = "UPDATE user_info SET recommendations = '$recommendations_json' WHERE tg_id = $client_id";
-    
+
     if ($conn->query($sql_update_recommendations) === TRUE) {
         header("Location: details.php?tg_id=$client_id&updated=true");
         exit();
@@ -99,10 +108,31 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_recommendations']
         echo "<p>Ошибка обновления рекомендаций: " . $conn->error . "</p>";
     }
 }
-?>
 
+$vitamin_data = $vitamin_data ?? [];
+$nutrition_data = $nutrition_data ?? []; // Если null, заменяем на []
+?>
 <!DOCTYPE html>
 <html lang="ru">
+<nav class="navbar">
+    <div class="navbar-container">
+        <div class="logo">Gym Assistant</div>
+        <button class="mobile-nav-toggle" aria-label="Toggle navigation">
+            <span class="bar"></span>
+            <span class="bar"></span>
+            <span class="bar"></span>
+        </button>
+        <ul class="nav-links">
+            <li><a href="index.php">Главная</a></li>
+        </ul>
+    </div>
+</nav>
+<script>
+    var nutritionData = <?php echo json_encode($nutrition_data ?? [], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>;
+    var vitaminData = <?php echo json_encode($vitamin_data ?? [], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>;
+</script>
+
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -123,94 +153,106 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_recommendations']
 </head>
 <body>
     <div class="container">
-        <h3 class="animated-text"><span></span></h2>
-        <?php if (isset($_GET['updated'])): ?>
+    <h1 class="page-banner">Персональная информация</h1>
+
+    <?php if (isset($_GET['updated'])): ?>
             <div id="notification" class="notification">✅ Данные успешно обновлены!</div>
         <?php endif; ?>
 
-        <!-- Режим просмотра -->
-        <div id="viewMode" class="info-card">
-            <p><strong>Имя:</strong> <?php echo htmlspecialchars($full_name); ?></p>
-            <p><strong>Возраст:</strong> <?php echo htmlspecialchars($age); ?> лет</p>
-            <p><strong>Рост:</strong> <?php echo htmlspecialchars($height); ?> см</p>
-            <p><strong>Вес:</strong> <?php echo htmlspecialchars($weight); ?> кг</p>
-            <p><strong>Пол:</strong> <?php echo htmlspecialchars($gender); ?></p>
-            <p><strong>Доп. информация:</strong> <?php echo htmlspecialchars($additional_info); ?></p>
-            <button class="btn edit-btn" onclick="toggleEditMode()">✏️ Редактировать</button>
+<!-- Форма редактирования -->
+<form method="POST">
+
+    <div class="input-group required">
+        <input type="text" name="full_name" id="full_name" value="<?php echo htmlspecialchars($full_name); ?>" required>
+        <label for="full_name">Имя</label>
+        <i class="fa fa-check-circle"></i>
+    </div>
+
+    <div class="input-group required">
+        <input type="number" name="age" id="age" value="<?php echo htmlspecialchars($age); ?>" required>
+        <label for="age">Возраст</label>
+        <i class="fa fa-check-circle"></i>
+    </div>
+
+    <div class="input-group required">
+        <input type="number" name="height" id="height" value="<?php echo htmlspecialchars($height); ?>" required>
+        <label for="height">Рост (см)</label>
+        <i class="fa fa-check-circle"></i>
+    </div>
+
+    <div class="input-group required">
+        <input type="number" name="weight" id="weight" value="<?php echo htmlspecialchars($weight); ?>" required>
+        <label for="weight">Вес (кг)</label>
+        <i class="fa fa-check-circle"></i>
+    </div>
+
+    <div class="input-group required">
+        <select name="gender" id="gender" required>
+            <option value="male" <?php echo ($gender == 'male') ? 'selected' : ''; ?>>Мужской</option>
+            <option value="female" <?php echo ($gender == 'female') ? 'selected' : ''; ?>>Женский</option>
+        </select>
+        <label for="gender">Пол</label>
+        <i class="fa fa-check-circle"></i>
+    </div>
+
+    <div class="input-group">
+        <input type="text" name="additional_info" id="additional_info" value="<?php echo htmlspecialchars($additional_info); ?>">
+        <label for="additional_info">Доп. информация</label>
+        <i class="fa fa-check-circle"></i>
+    </div>
+
+    <button type="submit" name="save_changes" class="btn save-btn">💾 Сохранить</button>
+</form>
+
+
+
+
+    <h1 class="page-banner">Данные по питанию</h1>
+    <form>
+<div class="dropdown-container">
+    <!-- Первый выпадающий список -->
+    <div class="dropdown">
+        <input class="dropdown-toggle" type="checkbox" id="dropdown-group"/>
+        <label class="dropdown-label" for="dropdown-group">
+            <span id="selected-group">По приёмам пищи</span>
+            <i class="uil uil-arrow-down"></i>
+        </label>
+        <div class="dropdown-menu">
+            <a href="#" onclick="setDropdownValue('dropdown-group', 'meals', 'По приёмам пищи')">По приёмам пищи</a>
+            <a href="#" onclick="setDropdownValue('dropdown-group', 'days', 'По дням')">По дням</a>
         </div>
+    </div>
 
-        <!-- Режим редактирования -->
-        <div id="editMode" class="edit-card" style="display: none;">
-            <h3>Редактирование</h3>
-            <form method="POST">
-                <label>Имя:</label>
-                <input type="text" name="full_name" value="<?php echo htmlspecialchars($full_name); ?>" required>
-
-                <label>Возраст:</label>
-                <input type="number" name="age" value="<?php echo htmlspecialchars($age); ?>" required>
-
-                <label>Рост:</label>
-                <input type="number" name="height" value="<?php echo htmlspecialchars($height); ?>" required>
-
-                <label>Вес:</label>
-                <input type="number" name="weight" value="<?php echo htmlspecialchars($weight); ?>" required>
-
-                <label>Пол:</label>
-                <select name="gender" required>
-                    <option value="male" <?php echo ($gender == 'male') ? 'selected' : ''; ?>>Мужской</option>
-                    <option value="female" <?php echo ($gender == 'female') ? 'selected' : ''; ?>>Женский</option>
-                </select>
-
-                <label>Доп. информация:</label>
-                <input type="text" name="additional_info" value="<?php echo htmlspecialchars($additional_info); ?>">
-
-                <div class="form-actions">
-                    <button type="submit" name="save_changes" class="btn save-btn">💾 Сохранить</button>
-                    <button type="button" class="btn cancel-btn" onclick="cancelEdit()">❌ Отмена</button>
-                </div>
-            </form>
+    <!-- Второй выпадающий список -->
+    <div class="dropdown">
+        <input class="dropdown-toggle" type="checkbox" id="dropdown-nutrient"/>
+        <label class="dropdown-label" for="dropdown-nutrient">
+            <span id="selected-nutrient">КБЖУ</span>
+            <i class="uil uil-arrow-down"></i>
+        </label>
+        <div class="dropdown-menu">
+            <a href="#" onclick="setDropdownValue('dropdown-nutrient', 'kbju', 'КБЖУ')">КБЖУ</a>
+            <a href="#" onclick="setDropdownValue('dropdown-nutrient', 'vitamins', 'Витамины и минералы')">Витамины и минералы</a>
         </div>
+    </div>
+</div>
 
-        <!-- Данные по питанию -->
-        <h3 class="animated-text2"><span></span></h3>
-        <table border="1">
-            <tr>
-                <th>Дата</th>
-                <th>Блюдо</th>
-                <th>Протеины</th>
-                <th>Жиры</th>
-                <th>Углеводы</th>
-                <th>Калорийность</th>
-            </tr>
+<div class="scrollbar" id="nutritionTableContainer" style="max-height: 270px; overflow-y: auto;">
+    <table border="1" id="nutritionTable">
+        <thead></thead>
+        <tbody></tbody>
+    </table>
+</div>
+    </form>
 
-            <?php
-            if (!empty($nutrition_data) && is_array($nutrition_data)) {
-                foreach ($nutrition_data as $date => $foods) {
-                    if (is_array($foods)) {
-                        foreach ($foods as $food) { ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($date); ?></td>
-                                <td><?php echo htmlspecialchars($food['food_item'] ?? 'Нет данных'); ?></td>
-                                <td><?php echo htmlspecialchars($food['proteins'] ?? 0); ?> г</td>
-                                <td><?php echo htmlspecialchars($food['fats'] ?? 0); ?> г</td>
-                                <td><?php echo htmlspecialchars($food['carbohydrates'] ?? 0); ?> г</td>
-                                <td><?php echo htmlspecialchars($food['calories'] ?? 0); ?> ккал</td>
-                            </tr>
-                        <?php }
-                    }
-                }
-            } else {
-                echo "<tr><td colspan='6'>Нет данных по питанию</td></tr>";
-            }
-            ?>
-        </table>
-        <h3 class="animated-text3"><span></span></h3>
+
+        <h1 class="page-banner">Рекомендации</h1>
         <form method="POST">
             <label>Рекомендации по питанию:</label>
-            <textarea name="nutrition_recommendation" rows="4"><?php echo htmlspecialchars($nutrition_recommendation); ?></textarea>
+            <textarea name="nutrition_recommendation" rows="10" class="no-resize"><?php echo htmlspecialchars($nutrition_recommendation); ?></textarea>
 
             <label>Рекомендации по тренировкам:</label>
-            <textarea name="training_recommendation" rows="4"><?php echo htmlspecialchars($training_recommendation); ?></textarea>
+            <textarea name="training_recommendation" rows="10" class="no-resize"><?php echo htmlspecialchars($training_recommendation); ?></textarea>
 
             <button type="submit" name="save_recommendations" class="btn save-btn">💾 Сохранить рекомендации</button>
         </form>
@@ -218,16 +260,246 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_recommendations']
         <!-- Back Button -->
         <a href="index.php" class="button back-button">⬅ Вернуться к списку</a>
     </div>
-    <script>
-window.onload = function() {
-    if (document.getElementById('notification')) {
-        var notification = document.getElementById('notification');
-        notification.classList.add('show');
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    let notification = document.getElementById('notification');
+
+    if (notification) {
+        console.log("✅ Уведомление найдено, запускаем анимацию!");
+
+        // Показываем уведомление
+        notification.style.visibility = "visible";
+        notification.style.opacity = "1";
+
+        // Убираем только ?updated=true, оставляя tg_id
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has("updated")) {
+            urlParams.delete("updated"); // ❌ Удаляем только updated, а не весь URL
+
+            const newUrl = window.location.pathname + "?" + urlParams.toString();
+            window.history.replaceState({}, document.title, newUrl);
+            console.log("🔄 Обновленный URL:", newUrl);
+        }
+
+        // Через 6 секунд скрываем уведомление
         setTimeout(function() {
-            notification.style.display = 'none';
-        }, 6000); // Уведомление исчезнет через 6 секунд
+            notification.style.opacity = "0";
+            setTimeout(() => {
+                notification.style.visibility = "hidden";
+            }, 500);
+        }, 6000);
     }
-};
+});
+
+let selectedViewType = "meals"; // По умолчанию "по приёмам пищи"
+    let selectedNutrientType = "kbju"; // По умолчанию "КБЖУ"
+
+    function setDropdownValue(dropdownId, value, text) {
+    document.getElementById(dropdownId).checked = false; // Закрываем меню
+    
+    // Сохраняем текущий scroll position перед обновлением
+    let scrollPosition = window.scrollY || document.documentElement.scrollTop;
+
+    if (dropdownId === "dropdown-group") {
+        selectedViewType = value;
+        document.getElementById("selected-group").innerText = text;
+    } else if (dropdownId === "dropdown-nutrient") {
+        selectedNutrientType = value;
+        document.getElementById("selected-nutrient").innerText = text;
+    }
+
+    // Обновляем таблицу, но не двигаем пользователя с его места
+    updateTable();
+
+    // Восстанавливаем положение страницы после обновления данных
+    setTimeout(() => {
+        window.scrollTo(0, scrollPosition);
+    }, 10); // Ждём немного, пока браузер обработает изменения
+}
+
+
+    function updateTable() {
+        let table = document.getElementById("nutritionTable");
+        let thead = table.querySelector("thead");
+        let tbody = table.querySelector("tbody");
+        tbody.innerHTML = ""; // Очищаем таблицу перед обновлением
+
+        if (selectedNutrientType === "kbju") {
+            if (selectedViewType === "meals") {
+                renderMealsTable();
+            } else {
+                renderDaysTable();
+            }
+        } else {
+            if (selectedViewType === "meals") {
+                renderVitaminsTable();
+            } else {
+                renderVitaminsDaysTable();
+            }
+        }
+    }
+
+    function renderMealsTable() {
+        let tbody = document.getElementById("nutritionTable").querySelector("tbody");
+        let thead = document.getElementById("nutritionTable").querySelector("thead");
+        thead.innerHTML = `
+            <tr>
+                <th>Дата</th>
+                <th>Блюдо</th>
+                <th>Протеины</th>
+                <th>Жиры</th>
+                <th>Углеводы</th>
+                <th>Калорийность</th>
+            </tr>`;
+
+        <?php
+        krsort($nutrition_data);
+        foreach ($nutrition_data as $date => $foods) {
+            foreach ($foods as $food) {
+                echo "tbody.innerHTML += `<tr>
+                    <td>" . htmlspecialchars($date) . "</td>
+                    <td>" . htmlspecialchars($food['food_item'] ?? 'Нет данных') . "</td>
+                    <td>" . htmlspecialchars($food['proteins'] ?? 0) . " г</td>
+                    <td>" . htmlspecialchars($food['fats'] ?? 0) . " г</td>
+                    <td>" . htmlspecialchars($food['carbohydrates'] ?? 0) . " г</td>
+                    <td>" . htmlspecialchars($food['calories'] ?? 0) . " ккал</td>
+                </tr>`;";
+            }
+        }
+        ?>
+    }
+
+    function renderDaysTable() {
+        let tbody = document.getElementById("nutritionTable").querySelector("tbody");
+        let thead = document.getElementById("nutritionTable").querySelector("thead");
+        thead.innerHTML = `
+            <tr>
+                <th>Дата</th>
+                <th>Общие протеины</th>
+                <th>Общие жиры</th>
+                <th>Общие углеводы</th>
+                <th>Общая калорийность</th>
+            </tr>`;
+
+        <?php
+        krsort($nutrition_data);
+        foreach ($nutrition_data as $date => $foods) {
+            $total_proteins = $total_fats = $total_carbs = $total_calories = 0;
+            foreach ($foods as $food) {
+                $total_proteins += $food['proteins'] ?? 0;
+                $total_fats += $food['fats'] ?? 0;
+                $total_carbs += $food['carbohydrates'] ?? 0;
+                $total_calories += $food['calories'] ?? 0;
+            }
+            echo "tbody.innerHTML += `<tr>
+                <td>" . htmlspecialchars($date) . "</td>
+                <td>" . htmlspecialchars($total_proteins) . " г</td>
+                <td>" . htmlspecialchars($total_fats) . " г</td>
+                <td>" . htmlspecialchars($total_carbs) . " г</td>
+                <td>" . htmlspecialchars($total_calories) . " ккал</td>
+            </tr>`;";
+        }
+        ?>
+    }
+
+    function renderVitaminsTable() {
+        let tbody = document.getElementById("nutritionTable").querySelector("tbody");
+        let thead = document.getElementById("nutritionTable").querySelector("thead");
+        thead.innerHTML = `
+            <tr>
+                <th>Дата</th>
+                <th>Продукт</th>
+                <th>A</th>
+                <th>C</th>
+                <th>D</th>
+                <th>E</th>
+                <th>K</th>
+                <th>B1</th>
+                <th>B2</th>
+                <th>B6</th>
+                <th>B9</th>
+                <th>B12</th>
+                <th>Железо</th>
+                <th>Цинк</th>
+                <th>Медь</th>
+                <th>Кальций</th>
+                <th>Магний</th>
+            </tr>`;
+
+        <?php
+        krsort($nutrition_data);
+        foreach ($nutrition_data as $date => $foods) {
+            foreach ($foods as $food) {
+                if (isset($food['A']) || isset($food['C']) || isset($food['iron'])) {
+                    echo "tbody.innerHTML += `<tr>
+                        <td>" . htmlspecialchars($date) . "</td>
+                        <td>" . htmlspecialchars($food['food_item'] ?? 'Неизвестно') . "</td>
+                        <td>" . htmlspecialchars($food['A'] ?? 0) . "</td>
+                        <td>" . htmlspecialchars($food['C'] ?? 0) . "</td>
+                        <td>" . htmlspecialchars($food['D'] ?? 0) . "</td>
+                        <td>" . htmlspecialchars($food['E'] ?? 0) . "</td>
+                        <td>" . htmlspecialchars($food['K'] ?? 0) . "</td>
+                        <td>" . htmlspecialchars($food['B1'] ?? 0) . "</td>
+                        <td>" . htmlspecialchars($food['B2'] ?? 0) . "</td>
+                        <td>" . htmlspecialchars($food['B6'] ?? 0) . "</td>
+                        <td>" . htmlspecialchars($food['B9'] ?? 0) . "</td>
+                        <td>" . htmlspecialchars($food['B12'] ?? 0) . "</td>
+                        <td>" . htmlspecialchars($food['iron'] ?? 0) . "</td>
+                        <td>" . htmlspecialchars($food['zinc'] ?? 0) . "</td>
+                        <td>" . htmlspecialchars($food['copper'] ?? 0) . "</td>
+                        <td>" . htmlspecialchars($food['calcium'] ?? 0) . "</td>
+                        <td>" . htmlspecialchars($food['magnesium'] ?? 0) . "</td>
+                    </tr>`;";
+                }
+            }
+        }
+        ?>
+    }
+
+    function renderVitaminsDaysTable() {
+        let tbody = document.getElementById("nutritionTable").querySelector("tbody");
+        let thead = document.getElementById("nutritionTable").querySelector("thead");
+        thead.innerHTML = `
+            <tr>
+                <th>Дата</th>
+                <th>A</th>
+                <th>C</th>
+                <th>D</th>
+                <th>E</th>
+                <th>K</th>
+                <th>B1</th>
+                <th>B2</th>
+                <th>B6</th>
+                <th>B9</th>
+                <th>B12</th>
+                <th>Железо</th>
+                <th>Цинк</th>
+                <th>Медь</th>
+                <th>Кальций</th>
+                <th>Магний</th>
+            </tr>`;
+
+        <?php
+        krsort($nutrition_data);
+        foreach ($nutrition_data as $date => $foods) {
+            // Суммируем витамины и минералы за день
+            $totals = array_fill_keys(['A', 'C', 'D', 'E', 'K', 'B1', 'B2', 'B6', 'B9', 'B12', 'iron', 'zinc', 'copper', 'calcium', 'magnesium'], 0);
+            foreach ($foods as $food) {
+                foreach ($totals as $key => $value) {
+                    $totals[$key] += $food[$key] ?? 0;
+                }
+            }
+            echo "tbody.innerHTML += `<tr><td>" . htmlspecialchars($date) . "</td>";
+            foreach ($totals as $value) echo "<td>" . htmlspecialchars($value) . "</td>";
+            echo "</tr>`;";
+        }
+        ?>
+    }
+
+    // Загружаем таблицу по умолчанию
+    window.onload = function() {
+        updateTable();
+    };
 </script>
 </body>
 </html>
