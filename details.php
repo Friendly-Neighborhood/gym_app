@@ -83,17 +83,10 @@ $additional_info = $personal_info['additional_info'];
 // Decode `nutritional_info`
 $nutrition_data = !empty($client['nutritional_info']) ? json_decode($client['nutritional_info'], true) : [];
 
-// Декодируем поле recommendations
+// Fetch recommendations
 $recommendations = !empty($client['recommendations']) ? json_decode($client['recommendations'], true) : [];
-
-// Берём нужные данные из recommendations
-$training_recommendation = $recommendations['training_recommendation'] ?? "";
-$nutrition_data = $recommendations['nutrition_recommendation'] ?? [];
-
-$aim = $nutrition_data['aim'] ?? "";
-$metabolism = $nutrition_data['metabolism'] ?? [];
-$nutrients_per_kg = $nutrition_data['nutrients_per_kg'] ?? [];
-$other_recommendations = $nutrition_data['other_recommendations'] ?? "";
+$nutrition_recommendation = $recommendations['nutrition_recommendation'] ?? '';
+$training_recommendation = $recommendations['training_recommendation'] ?? '';
 
 // Handle recommendation save
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_recommendations'])) {
@@ -159,33 +152,44 @@ $trainings = !empty($row_fetch_trainings['trainings']) ? json_decode($row_fetch_
 
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_nutrition_recommendations'])) {
-    $new_aim = $_POST['aim'] ?? "";
-    $new_other_recommendations = $_POST['other_recommendations'] ?? "";
+    $new_aim = $conn->real_escape_string($_POST['aim']);
+    $new_basal = (int)$_POST['metabolism_basal'];
+    $new_maintenance = (int)$_POST['metabolism_maintenance'];
+    $new_bulking = (int)$_POST['metabolism_bulking'];
+    $new_cutting = (int)$_POST['metabolism_cutting'];
+    $new_proteins = (int)$_POST['proteins'];
+    $new_fats = (int)$_POST['fats'];
+    $new_carbohydrates = (int)$_POST['carbohydrates'];
+    $new_other_recommendations = $conn->real_escape_string($_POST['other_recommendations']);
 
-    // Формируем обновленный JSON-объект
-    $updated_recommendations = [
-        "training_recommendation" => $training_recommendation, // Не трогаем, просто сохраняем
-        "nutrition_recommendation" => [
-            "aim" => $new_aim,
-            "metabolism" => $metabolism, // Оставляем как есть
-            "nutrients_per_kg" => $nutrients_per_kg, // Оставляем как есть
-            "other_recommendations" => $new_other_recommendations
-        ]
-    ];
+    // Структура JSON
+    $updated_nutrition_data = json_encode([
+        "aim" => $new_aim,
+        "metabolism" => [
+            "basal" => $new_basal,
+            "maintenance" => $new_maintenance,
+            "bulking" => $new_bulking,
+            "cutting" => $new_cutting
+        ],
+        "nutrients_per_kg" => [
+            "proteins" => $new_proteins,
+            "fats" => $new_fats,
+            "carbohydrates" => $new_carbohydrates
+        ],
+        "other_recommendations" => $new_other_recommendations
+    ], JSON_UNESCAPED_UNICODE);
 
-    // Кодируем JSON
-    $recommendations_json = json_encode($updated_recommendations, JSON_UNESCAPED_UNICODE);
+    // Запрос на обновление в БД
+    $sql_update_nutrition = "UPDATE user_info SET recommendations = '$updated_nutrition_data' WHERE tg_id = $client_id";
 
-    // Обновляем базу данных
-    $sql_update_recommendations = "UPDATE user_info SET recommendations = '$recommendations_json' WHERE tg_id = $client_id";
-
-    if ($conn->query($sql_update_recommendations) === TRUE) {
+    if ($conn->query($sql_update_nutrition) === TRUE) {
         header("Location: details.php?tg_id=$client_id&updated=true");
         exit();
     } else {
-        echo "<p>Ошибка обновления рекомендаций: " . $conn->error . "</p>";
+        echo "<p>Ошибка обновления: " . $conn->error . "</p>";
     }
 }
+
 
 
 $vitamin_data = $vitamin_data ?? [];
@@ -332,37 +336,37 @@ $nutrition_data = $nutrition_data ?? []; // Если null, заменяем на
     <!-- Цель (выбор из списка) -->
     <div class="section-header">Цель</div>
     <div class="input-group required">
-    <select name="aim" id="aim" required>
-        <option value="Снижение" <?php echo ($aim ?? '') == "Снижение" ? "selected" : ""; ?>>Снижение</option>
-        <option value="Поддержание" <?php echo ($aim ?? '') == "Поддержание" ? "selected" : ""; ?>>Поддержание</option>
-        <option value="Набор" <?php echo ($aim ?? '') == "Набор" ? "selected" : ""; ?>>Набор</option>
-    </select>
-    <label for="aim">Цель</label>
-    <i class="fa fa-check-circle"></i>
-</div>
+        <select name="aim" id="aim">
+            <option value="Снижение веса" <?php echo ($recommendations['aim'] ?? '') == "Снижение веса" ? "selected" : ""; ?>>Снижение</option>
+            <option value="Поддержание" <?php echo ($recommendations['aim'] ?? '') == "Поддержание" ? "selected" : ""; ?>>Поддержание</option>
+            <option value="Набор" <?php echo ($recommendations['aim'] ?? '') == "Набор" ? "selected" : ""; ?>>Набор</option>
+        </select>
+        <label for="aim">Цель</label>
+        <i class="fa fa-check-circle"></i>
+    </div>
 
     <!-- Блок с метаболизмом -->
     <div class="section-header">Метаболизм</div>
     <div class="input-group">
-        <input type="text" id="metabolism_basal" name="metabolism_basal" value="<?php echo htmlspecialchars($metabolism['basal'] ?? 0); ?>">
+        <input type="text" id="metabolism_basal" name="metabolism_basal" value="<?php echo htmlspecialchars($recommendations['metabolism']['basal'] ?? 0); ?>">
         <label>Базальный метаболизм (ккал)</label>
         <i class="fa fa-chart-line"></i>
     </div>
 
     <div class="input-group">
-        <input type="text" id="metabolism_maintenance" name="metabolism_maintenance" value="<?php echo htmlspecialchars($metabolism['maintenance'] ?? 0); ?>">
+        <input type="text" id="metabolism_maintenance" name="metabolism_maintenance" value="<?php echo htmlspecialchars($recommendations['metabolism']['maintenance'] ?? 0); ?>">
         <label>Поддержание (ккал)</label>
         <i class="fa fa-balance-scale"></i>
     </div>
 
     <div class="input-group">
-        <input type="text" id="metabolism_bulking" name="metabolism_bulking" value="<?php echo htmlspecialchars($metabolism['bulking'] ?? 0); ?>">
+        <input type="text" id="metabolism_bulking" name="metabolism_bulking" value="<?php echo htmlspecialchars($recommendations['metabolism']['bulking'] ?? 0); ?>">
         <label>Набор массы (ккал)</label>
         <i class="fa fa-arrow-up"></i>
     </div>
 
     <div class="input-group">
-        <input type="text" id="metabolism_cutting" name="metabolism_cutting" value="<?php echo htmlspecialchars($metabolism['cutting'] ?? 0); ?>">
+        <input type="text" id="metabolism_cutting" name="metabolism_cutting" value="<?php echo htmlspecialchars($recommendations['metabolism']['cutting'] ?? 0); ?>">
         <label>Снижение веса (ккал)</label>
         <i class="fa fa-arrow-down"></i>
     </div>
@@ -370,19 +374,19 @@ $nutrition_data = $nutrition_data ?? []; // Если null, заменяем на
     <!-- БЖУ -->
     <div class="section-header">БЖУ</div>
     <div class="input-group">
-        <input type="text" id="proteins" name="proteins" value="<?php echo htmlspecialchars($nutrients_per_kg['proteins'] ?? 0); ?>">
+        <input type="text" id="proteins" name="proteins" value="<?php echo htmlspecialchars($recommendations['nutrients_per_kg']['proteins'] ?? 0); ?>">
         <label>Белки (г/кг)</label>
         <i class="fa fa-egg"></i>
     </div>
 
     <div class="input-group">
-        <input type="text" id="fats" name="fats" value="<?php echo htmlspecialchars($nutrients_per_kg['fats'] ?? 0); ?>">
+        <input type="text" id="fats" name="fats" value="<?php echo htmlspecialchars($recommendations['nutrients_per_kg']['fats'] ?? 0); ?>">
         <label>Жиры (г/кг)</label>
         <i class="fa fa-tint"></i>
     </div>
 
     <div class="input-group">
-        <input type="text" id="carbohydrates" name="carbohydrates" value="<?php echo htmlspecialchars($nutrients_per_kg['carbohydrates'] ?? 0); ?>">
+        <input type="text" id="carbohydrates" name="carbohydrates" value="<?php echo htmlspecialchars($recommendations['nutrients_per_kg']['carbohydrates'] ?? 0); ?>">
         <label>Углеводы (г/кг)</label>
         <i class="fa fa-bread-slice"></i>
     </div>
@@ -390,14 +394,12 @@ $nutrition_data = $nutrition_data ?? []; // Если null, заменяем на
     <!-- Поле "Другие рекомендации" -->
     <div class="section-header">Дополнительно</div>
     <div class="textarea-group">
-        <textarea name="other_recommendations" id="other_recommendations" rows="4" class="no-resize"
-                  onfocus="toggleLabel(this)" oninput="toggleLabel(this)" onblur="toggleLabel(this)"><?php echo htmlspecialchars($other_recommendations); ?></textarea>
+    <textarea name="other_recommendations" id="other_recommendations" rows="4" class="no-resize" onfocus="toggleLabel(this)" oninput="toggleLabel(this)" onblur="toggleLabel(this)"><?php echo htmlspecialchars($recommendations['other_recommendations'] ?? ""); ?></textarea>
     </div>
 
     <!-- Кнопка сохранить -->
     <button type="submit" name="save_nutrition_recommendations" class="btn save-btn">💾 Сохранить рекомендации</button>
 </form>
-
 
         <!-- Блок для добавления тренировок -->
         <br><br>
@@ -753,19 +755,20 @@ let selectedViewType = "meals"; // По умолчанию "по приёмам 
         }
         ?>
     }
-
-    if (urlParams.has("training_added")) {
-    urlParams.delete("training_added");
-
-    const newUrl = window.location.pathname + "?" + urlParams.toString();
-    window.history.replaceState({}, document.title, newUrl);
-} 
+    function toggleLabel(textarea) {
+    let label = textarea.previousElementSibling;
+    if (textarea.value.trim() !== "" || document.activeElement === textarea) {
+        label.style.display = "none"; // Прячем label
+    } else {
+        label.style.display = "block"; // Показываем label, если пусто
+    }
+    }
 
     // Загружаем таблицу по умолчанию
     window.onload = function() {
         updateTable();
-    };   
-    
+    };    
+
 </script>
 </body>
 </html>
