@@ -180,7 +180,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_nutrition_recomme
     ], JSON_UNESCAPED_UNICODE);
 
     // Запрос на обновление в БД
-    $sql_update_nutrition = "UPDATE user_info SET nutritional_info = '$updated_nutrition_data' WHERE tg_id = $client_id";
+    $sql_update_nutrition = "UPDATE user_info SET recomemndations = '$updated_nutrition_data' WHERE tg_id = $client_id";
 
     if ($conn->query($sql_update_nutrition) === TRUE) {
         header("Location: details.php?tg_id=$client_id&updated=true");
@@ -756,10 +756,7 @@ let selectedViewType = "meals"; // По умолчанию "по приёмам 
         ?>
     }
 
-    // Загружаем таблицу по умолчанию
-    window.onload = function() {
-        updateTable();
-    };   
+
     function updateValuesBasedOnAim() {
         var selectedAim = document.getElementById('aim').value;
         var basal = <?php echo json_encode($nutrition_data['metabolism']['basal'] ?? 0); ?>;
@@ -787,6 +784,12 @@ let selectedViewType = "meals"; // По умолчанию "по приёмам 
     const newUrl = window.location.pathname + "?" + urlParams.toString();
     window.history.replaceState({}, document.title, newUrl);
 } 
+
+    // Загружаем таблицу по умолчанию
+    window.onload = function() {
+        updateTable();
+    };   
+    
 </script>
 </body>
 </html>
