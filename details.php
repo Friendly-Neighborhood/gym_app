@@ -756,7 +756,10 @@ let selectedViewType = "meals"; // По умолчанию "по приёмам 
         ?>
     }
 
-
+    // Загружаем таблицу по умолчанию
+    window.onload = function() {
+        updateTable();
+    };   
     function updateValuesBasedOnAim() {
         var selectedAim = document.getElementById('aim').value;
         var basal = <?php echo json_encode($nutrition_data['metabolism']['basal'] ?? 0); ?>;
@@ -784,11 +787,6 @@ let selectedViewType = "meals"; // По умолчанию "по приёмам 
     const newUrl = window.location.pathname + "?" + urlParams.toString();
     window.history.replaceState({}, document.title, newUrl);
 } 
-
-    // Загружаем таблицу по умолчанию
-    window.onload = function() {
-        updateTable();
-    };   
 </script>
 </body>
 </html>
