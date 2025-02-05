@@ -452,6 +452,12 @@ $nutrition_data = $nutrition_data ?? []; // Если null, заменяем на
             $trainings = !empty($row_fetch['trainings']) ? json_decode($row_fetch['trainings'], true) : [];
 
             if (!empty($trainings)) {
+                // Сортируем тренировки по убыванию даты (новые сверху)
+                usort($trainings, function ($a, $b) {
+                    return strtotime($b['date']) - strtotime($a['date']);
+                });
+
+                // Выводим отсортированные тренировки
                 foreach ($trainings as $training) {
                     $date = date("d.m.Y H:i", strtotime($training['date']));
                     $groups = implode(", ", $training['muscle_group']);
@@ -464,8 +470,6 @@ $nutrition_data = $nutrition_data ?? []; // Если null, заменяем на
         </tbody>
     </table>
 </div>
-
-
 
         <!-- Back Button -->
         <a href="index.php" class="button back-button">⬅ Вернуться к списку</a>
