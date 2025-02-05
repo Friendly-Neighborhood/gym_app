@@ -952,3 +952,65 @@ section:nth-child(even) {
     background: linear-gradient(90deg, #ff3366, #ff6b6b, #4834d4, #686de0);
     margin-top: 5px;
 }
+
+.picklist {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.picklist-option {
+    padding: 10px 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s;
+    font-weight: 500;
+    color: white;
+}
+
+.picklist-option:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.picklist-option.selected {
+    background: linear-gradient(45deg, #ff3366, #ff6b6b, #4834d4, #686de0);
+    color: white;
+    font-weight: 700;
+}
+
+/* Стили для контейнера выбранных */
+.selected-muscles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.selected-muscle {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-weight: 500;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.selected-muscle .remove-btn {
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    padding: 5px;
+    font-size: 14px;
+    transition: 0.3s;
+}
+
+.selected-muscle .remove-btn:hover {
+    background: rgba(255, 255, 255, 0.5);
+}

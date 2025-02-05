@@ -111,32 +111,36 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_recommendations']
 
 // Форма обработки добавления новой тренировки
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_training'])) {
-    $muscle_group = $conn->real_escape_string($_POST['muscle_group']);
-    $current_datetime = date("Y-m-d H:i:s");
-
-    // Получаем текущие данные о тренировках
-    $sql_fetch_trainings = "SELECT trainings FROM user_info WHERE tg_id = $client_id";
-    $result_fetch_trainings = $conn->query($sql_fetch_trainings);
-    $row_fetch_trainings = $result_fetch_trainings->fetch_assoc();
+    // Получаем переданные данные
+    $selected_muscles = isset($_POST['muscle_group']) ? json_decode($_POST['muscle_group'], true) : [];
     
-    // Декодируем JSON или создаем пустой массив, если данных нет
-    $trainings = !empty($row_fetch_trainings['trainings']) ? json_decode($row_fetch_trainings['trainings'], true) : [];
+    // Проверяем, что список не пустой
+    if (!empty($selected_muscles)) {
+        // Получаем текущие тренировки из БД
+        $sql_fetch = "SELECT trainings FROM user_info WHERE tg_id = $client_id";
+        $result_fetch = $conn->query($sql_fetch);
+        $row_fetch = $result_fetch->fetch_assoc();
+        $existing_trainings = !empty($row_fetch['trainings']) ? json_decode($row_fetch['trainings'], true) : [];
 
-    // Добавляем новую запись
-    $trainings[] = [
-        "date" => $current_datetime,
-        "muscle_group" => $muscle_group
-    ];
+        // Добавляем новую запись
+        $new_training = [
+            "date" => date("Y-m-d H:i:s"),
+            "muscle_group" => $selected_muscles
+        ];
+        $existing_trainings[] = $new_training;
 
-    // Сохраняем обновлённые данные в JSON
-    $updated_trainings_json = json_encode($trainings, JSON_UNESCAPED_UNICODE);
-    $sql_update_trainings = "UPDATE user_info SET trainings = '$updated_trainings_json' WHERE tg_id = $client_id";
+        // Обновляем БД
+        $updated_trainings_json = json_encode($existing_trainings, JSON_UNESCAPED_UNICODE);
+        $sql_update = "UPDATE user_info SET trainings = '$updated_trainings_json' WHERE tg_id = $client_id";
 
-    if ($conn->query($sql_update_trainings) === TRUE) {
-        header("Location: details.php?tg_id=$client_id&training_added=true");
-        exit();
+        if ($conn->query($sql_update) === TRUE) {
+            header("Location: details.php?tg_id=$client_id&training_added=true");
+            exit();
+        } else {
+            echo "<p>Ошибка сохранения тренировки: " . $conn->error . "</p>";
+        }
     } else {
-        echo "<p>Ошибка обновления тренировок: " . $conn->error . "</p>";
+        echo "<p>Выберите хотя бы одну группу мышц!</p>";
     }
 }
 
@@ -147,14 +151,39 @@ $row_fetch_trainings = $result_fetch_trainings->fetch_assoc();
 $trainings = !empty($row_fetch_trainings['trainings']) ? json_decode($row_fetch_trainings['trainings'], true) : [];
 
 
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_nutrition_aim'])) {
-    $aim = $conn->real_escape_string($_POST['aim']);
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_nutrition_recommendations'])) {
+    $new_aim = $conn->real_escape_string($_POST['aim']);
+    $new_basal = (int)$_POST['metabolism_basal'];
+    $new_maintenance = (int)$_POST['metabolism_maintenance'];
+    $new_bulking = (int)$_POST['metabolism_bulking'];
+    $new_cutting = (int)$_POST['metabolism_cutting'];
+    $new_proteins = (int)$_POST['proteins'];
+    $new_fats = (int)$_POST['fats'];
+    $new_carbohydrates = (int)$_POST['carbohydrates'];
+    $new_other_recommendations = $conn->real_escape_string($_POST['other_recommendations']);
 
-    // Обновляем JSON только с новой целью
-    $sql_update_aim = "UPDATE user_info SET recommendations = JSON_SET(recommendations, '$.nutrition_recommendation.aim', '$aim') WHERE tg_id = $client_id";
+    // Структура JSON
+    $updated_nutrition_data = json_encode([
+        "aim" => $new_aim,
+        "metabolism" => [
+            "basal" => $new_basal,
+            "maintenance" => $new_maintenance,
+            "bulking" => $new_bulking,
+            "cutting" => $new_cutting
+        ],
+        "nutrients_per_kg" => [
+            "proteins" => $new_proteins,
+            "fats" => $new_fats,
+            "carbohydrates" => $new_carbohydrates
+        ],
+        "other_recommendations" => $new_other_recommendations
+    ], JSON_UNESCAPED_UNICODE);
 
-    if ($conn->query($sql_update_aim) === TRUE) {
-        header("Location: details.php?tg_id=$client_id&aim_updated=true");
+    // Запрос на обновление в БД
+    $sql_update_nutrition = "UPDATE user_info SET nutritional_info = '$updated_nutrition_data' WHERE tg_id = $client_id";
+
+    if ($conn->query($sql_update_nutrition) === TRUE) {
+        header("Location: details.php?tg_id=$client_id&updated=true");
         exit();
     } else {
         echo "<p>Ошибка обновления: " . $conn->error . "</p>";
@@ -304,12 +333,11 @@ $nutrition_data = $nutrition_data ?? []; // Если null, заменяем на
 
 <!-- Форма с рекомендациями -->
 <form method="POST">
-
     <!-- Цель (выбор из списка) -->
     <div class="section-header">Цель</div>
     <div class="input-group required">
         <select name="aim" id="aim" required onchange="updateValuesBasedOnAim()">
-            <option value="Снижение веса" <?php echo ($nutrition_data['aim'] ?? '') == "Снижение веса" ? "selected" : ""; ?>>Снижение</option>
+            <option value="Снижение" <?php echo ($nutrition_data['aim'] ?? '') == "Снижение веса" ? "selected" : ""; ?>>Снижение</option>
             <option value="Поддержание" <?php echo ($nutrition_data['aim'] ?? '') == "Поддержание" ? "selected" : ""; ?>>Поддержание</option>
             <option value="Набор" <?php echo ($nutrition_data['aim'] ?? '') == "Набор" ? "selected" : ""; ?>>Набор</option>
         </select>
@@ -320,25 +348,25 @@ $nutrition_data = $nutrition_data ?? []; // Если null, заменяем на
     <!-- Блок с метаболизмом -->
     <div class="section-header">Метаболизм</div>
     <div class="input-group">
-        <input type="text" id="metabolism_basal" value="<?php echo htmlspecialchars($nutrition_data['metabolism']['basal'] ?? 0); ?>" readonly>
+        <input type="text" id="metabolism_basal" name="metabolism_basal" value="<?php echo htmlspecialchars($nutrition_data['metabolism']['basal'] ?? 0); ?>">
         <label>Базальный метаболизм (ккал)</label>
         <i class="fa fa-chart-line"></i>
     </div>
 
     <div class="input-group">
-        <input type="text" id="metabolism_maintenance" value="<?php echo htmlspecialchars($nutrition_data['metabolism']['maintenance'] ?? 0); ?>" readonly>
+        <input type="text" id="metabolism_maintenance" name="metabolism_maintenance" value="<?php echo htmlspecialchars($nutrition_data['metabolism']['maintenance'] ?? 0); ?>">
         <label>Поддержание (ккал)</label>
         <i class="fa fa-balance-scale"></i>
     </div>
 
     <div class="input-group">
-        <input type="text" id="metabolism_bulking" value="<?php echo htmlspecialchars($nutrition_data['metabolism']['bulking'] ?? 0); ?>" readonly>
+        <input type="text" id="metabolism_bulking" name="metabolism_bulking" value="<?php echo htmlspecialchars($nutrition_data['metabolism']['bulking'] ?? 0); ?>">
         <label>Набор массы (ккал)</label>
         <i class="fa fa-arrow-up"></i>
     </div>
 
     <div class="input-group">
-        <input type="text" id="metabolism_cutting" value="<?php echo htmlspecialchars($nutrition_data['metabolism']['cutting'] ?? 0); ?>" readonly>
+        <input type="text" id="metabolism_cutting" name="metabolism_cutting" value="<?php echo htmlspecialchars($nutrition_data['metabolism']['cutting'] ?? 0); ?>">
         <label>Снижение веса (ккал)</label>
         <i class="fa fa-arrow-down"></i>
     </div>
@@ -346,34 +374,32 @@ $nutrition_data = $nutrition_data ?? []; // Если null, заменяем на
     <!-- БЖУ -->
     <div class="section-header">БЖУ</div>
     <div class="input-group">
-        <input type="text" id="proteins" value="<?php echo htmlspecialchars($nutrition_data['nutrients_per_kg']['proteins'] ?? 0); ?>" readonly>
+        <input type="text" id="proteins" name="proteins" value="<?php echo htmlspecialchars($nutrition_data['nutrients_per_kg']['proteins'] ?? 0); ?>">
         <label>Белки (г/кг)</label>
         <i class="fa fa-egg"></i>
     </div>
 
     <div class="input-group">
-        <input type="text" id="fats" value="<?php echo htmlspecialchars($nutrition_data['nutrients_per_kg']['fats'] ?? 0); ?>" readonly>
+        <input type="text" id="fats" name="fats" value="<?php echo htmlspecialchars($nutrition_data['nutrients_per_kg']['fats'] ?? 0); ?>">
         <label>Жиры (г/кг)</label>
         <i class="fa fa-tint"></i>
     </div>
 
     <div class="input-group">
-        <input type="text" id="carbohydrates" value="<?php echo htmlspecialchars($nutrition_data['nutrients_per_kg']['carbohydrates'] ?? 0); ?>" readonly>
+        <input type="text" id="carbohydrates" name="carbohydrates" value="<?php echo htmlspecialchars($nutrition_data['nutrients_per_kg']['carbohydrates'] ?? 0); ?>">
         <label>Углеводы (г/кг)</label>
         <i class="fa fa-bread-slice"></i>
     </div>
 
-    <!-- Поле "Другие рекомендации" теперь можно редактировать -->
+    <!-- Поле "Другие рекомендации" -->
     <div class="section-header">Дополнительно</div>
     <div class="textarea-group">
-    <label for="other_recommendations" class="floating-label">Другие рекомендации</label>
     <textarea name="other_recommendations" id="other_recommendations" rows="4" class="no-resize" onfocus="toggleLabel(this)" oninput="toggleLabel(this)" onblur="toggleLabel(this)"><?php echo htmlspecialchars($nutrition_data['other_recommendations'] ?? ""); ?></textarea>
     </div>
 
     <!-- Кнопка сохранить -->
     <button type="submit" name="save_nutrition_recommendations" class="btn save-btn">💾 Сохранить рекомендации</button>
 </form>
-
 
         <!-- Блок для добавления тренировок -->
         <br><br>
@@ -385,20 +411,25 @@ $nutrition_data = $nutrition_data ?? []; // Если null, заменяем на
 <?php endif; ?>
 
 <!-- Форма добавления новой тренировки -->
-<form method="POST">
+<form method="POST" id="trainingForm">
     <div class="input-group required">
-        <select name="muscle_group" required>
-            <option value="спина">Спина</option>
-            <option value="грудь">Грудь</option>
-            <option value="дельты">Дельты</option>
-            <option value="бицепс">Бицепс</option>
-            <option value="трицепс">Трицепс</option>
-            <option value="ноги">Ноги</option>
-            <option value="ягодицы">Ягодицы</option>
-        </select>
-        <label for="muscle_group">Группа мышц</label>
-        <i class="fa fa-check-circle"></i>
+        <div id="muscle_select" class="picklist">
+            <div class="picklist-option" data-value="спина">Спина</div>
+            <div class="picklist-option" data-value="грудь">Грудь</div>
+            <div class="picklist-option" data-value="дельты">Дельты</div>
+            <div class="picklist-option" data-value="бицепс">Бицепс</div>
+            <div class="picklist-option" data-value="трицепс">Трицепс</div>
+            <div class="picklist-option" data-value="ноги">Ноги</div>
+            <div class="picklist-option" data-value="ягодицы">Ягодицы</div>
+        </div>
     </div>
+
+    <!-- Контейнер для выбранных групп -->
+    <div id="selected_muscles" class="selected-muscles"></div>
+
+    <!-- Скрытое поле для передачи данных в PHP -->
+    <input type="hidden" name="muscle_group" id="muscle_group_input">
+
     <button type="submit" name="add_training" class="btn save-btn">➕ Добавить тренировку</button>
 </form>
 
@@ -409,17 +440,22 @@ $nutrition_data = $nutrition_data ?? []; // Если null, заменяем на
         <thead>
             <tr>
                 <th>Дата</th>
-                <th>Группа мышц</th>
+                <th>Группы мышц</th>
             </tr>
         </thead>
         <tbody>
             <?php
+            // Получаем JSON с тренировками
+            $sql_fetch = "SELECT trainings FROM user_info WHERE tg_id = $client_id";
+            $result_fetch = $conn->query($sql_fetch);
+            $row_fetch = $result_fetch->fetch_assoc();
+            $trainings = !empty($row_fetch['trainings']) ? json_decode($row_fetch['trainings'], true) : [];
+
             if (!empty($trainings)) {
-                foreach (array_reverse($trainings) as $training) { // Выводим последние записи первыми
-                    echo "<tr>
-                            <td>" . date("d.m.Y H:i", strtotime($training['date'])) . "</td>
-                            <td>" . htmlspecialchars($training['muscle_group']) . "</td>
-                          </tr>";
+                foreach ($trainings as $training) {
+                    $date = date("d.m.Y H:i", strtotime($training['date']));
+                    $groups = implode(", ", $training['muscle_group']);
+                    echo "<tr><td>$date</td><td>$groups</td></tr>";
                 }
             } else {
                 echo "<tr><td colspan='2'>Записей нет</td></tr>";
@@ -435,6 +471,56 @@ $nutrition_data = $nutrition_data ?? []; // Если null, заменяем на
         <a href="index.php" class="button back-button">⬅ Вернуться к списку</a>
     </div>
 <script>
+document.addEventListener("DOMContentLoaded", function () {
+    const picklistOptions = document.querySelectorAll(".picklist-option");
+    const selectedMusclesContainer = document.getElementById("selected_muscles");
+    const muscleGroupsInput = document.getElementById("muscle_group_input");
+    let selectedMuscles = [];
+
+    // Обработка кликов по пиклисту
+    picklistOptions.forEach(option => {
+        option.addEventListener("click", function () {
+            const value = this.getAttribute("data-value");
+
+            if (selectedMuscles.includes(value)) {
+                // Убираем из списка
+                selectedMuscles = selectedMuscles.filter(muscle => muscle !== value);
+                this.classList.remove("selected");
+                updateSelectedMuscles();
+            } else {
+                // Добавляем в список
+                selectedMuscles.push(value);
+                this.classList.add("selected");
+                updateSelectedMuscles();
+            }
+        });
+    });
+
+    // Функция обновления отображаемых мышц
+    function updateSelectedMuscles() {
+        selectedMusclesContainer.innerHTML = "";
+        selectedMuscles.forEach(muscle => {
+            const div = document.createElement("div");
+            div.classList.add("selected-muscle");
+            div.innerHTML = `${muscle} <span class="remove-btn" data-value="${muscle}">❌</span>`;
+            selectedMusclesContainer.appendChild(div);
+        });
+
+        // Обновляем скрытое поле для передачи данных в PHP
+        muscleGroupsInput.value = JSON.stringify(selectedMuscles);
+
+        // Добавляем обработчик удаления
+        document.querySelectorAll(".remove-btn").forEach(button => {
+            button.addEventListener("click", function () {
+                const value = this.getAttribute("data-value");
+                selectedMuscles = selectedMuscles.filter(muscle => muscle !== value);
+                document.querySelector(`[data-value="${value}"]`).classList.remove("selected");
+                updateSelectedMuscles();
+            });
+        });
+    }
+});
+
 document.addEventListener("DOMContentLoaded", function () {
     let notification = document.getElementById('notification');
 
@@ -670,19 +756,8 @@ let selectedViewType = "meals"; // По умолчанию "по приёмам 
         ?>
     }
 
-    // Загружаем таблицу по умолчанию
-    window.onload = function() {
-        updateTable();
-    };
 
-    if (urlParams.has("training_added")) {
-    urlParams.delete("training_added");
-
-    const newUrl = window.location.pathname + "?" + urlParams.toString();
-    window.history.replaceState({}, document.title, newUrl);
-}    
-
-function updateValuesBasedOnAim() {
+    function updateValuesBasedOnAim() {
         var selectedAim = document.getElementById('aim').value;
         var basal = <?php echo json_encode($nutrition_data['metabolism']['basal'] ?? 0); ?>;
         var maintenance = <?php echo json_encode($nutrition_data['metabolism']['maintenance'] ?? 0); ?>;
@@ -703,14 +778,17 @@ function updateValuesBasedOnAim() {
         document.getElementById('carbohydrates').value = carbohydrates;
     }
 
-    function toggleLabel(textarea) {
-    let label = textarea.previousElementSibling;
-    if (textarea.value.trim() !== "" || document.activeElement === textarea) {
-        label.style.display = "none"; // Прячем label
-    } else {
-        label.style.display = "block"; // Показываем label, если пусто
-    }
-    }
+    if (urlParams.has("training_added")) {
+    urlParams.delete("training_added");
+
+    const newUrl = window.location.pathname + "?" + urlParams.toString();
+    window.history.replaceState({}, document.title, newUrl);
+} 
+
+    // Загружаем таблицу по умолчанию
+    window.onload = function() {
+        updateTable();
+    };   
 </script>
 </body>
 </html>
