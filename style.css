@@ -629,7 +629,7 @@ body {
 
 .navbar_index {
     margin-bottom: 20px;
-    position: fixed;
+    position: sticky;
     top: 0;
     left: 0;
     width: 90%;
