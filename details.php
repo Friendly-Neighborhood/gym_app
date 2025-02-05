@@ -180,7 +180,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_nutrition_recomme
     ], JSON_UNESCAPED_UNICODE);
 
     // Запрос на обновление в БД
-    $sql_update_nutrition = "UPDATE user_info SET recomemndations = '$updated_nutrition_data' WHERE tg_id = $client_id";
+    $sql_update_nutrition = "UPDATE user_info SET recommendations = '$updated_nutrition_data' WHERE tg_id = $client_id";
 
     if ($conn->query($sql_update_nutrition) === TRUE) {
         header("Location: details.php?tg_id=$client_id&updated=true");
