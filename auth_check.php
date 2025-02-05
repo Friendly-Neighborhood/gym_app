@@ -43,3 +43,10 @@ if ($result->num_rows === 0) {
 unset($_SERVER['PHP_AUTH_USER']);
 unset($_SERVER['PHP_AUTH_PW']);
 ?>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Gym Assistant</title>
+  <link rel="icon" type="image/png" href="icon.png?">
+</head>
+<body>

@@ -226,11 +226,37 @@ input:focus, textarea:focus {
   }
 
   /* ✅ Запрещаем изменение размера по ширине */
-.no-resize {
+  .no-resize {
     resize: vertical; /* Можно растягивать только вверх/вниз */
-    width: 100%; /* Заполняет всю ширину контейнера */
-    max-width: 100%; /* Фиксируем максимальную ширину */
-    min-width: 100%; /* Фиксируем минимальную ширину */
+    width: 1343px; /* Уменьшаем начальную ширину */
+}
+.textarea-group {
+    position: relative;
+    width: 100%;
+    max-width: 400px; /* Максимальная ширина */
+}
+
+
+/* Новый стиль для label внутри textarea */
+.textarea-group .floating-label {
+    position: absolute;
+    left: 12px;
+    top: 12px;
+    font-size: 14px;
+    color: #aaa;
+    transition: all 0.3s ease-in-out;
+    pointer-events: none; /* Запрещает клик на label */
+}
+
+/* Когда textarea в фокусе или содержит текст – label поднимается */
+.no-resize:focus + .floating-label,
+.no-resize:not(:placeholder-shown) + .floating-label {
+    top: -8px;
+    left: 10px;
+    font-size: 14px;
+    color: #555;
+    background: white;
+    padding: 0 5px;
 }
 
 /* ✅ Контейнер для селектов */
@@ -325,6 +351,18 @@ input:focus, textarea:focus {
     color: white;
     transform: scale(1.05);
 }
+
+.dropdown::after {
+    content: "▼"; /* Unicode-символ стрелки вниз */
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    color: #ffffff;
+    pointer-events: none;
+}
+
 /* === Общий стиль формы === */
 .personal-info-form {
     max-width: 100%;
@@ -892,4 +930,25 @@ section:nth-child(even) {
 #nutritionTableContainer::-webkit-scrollbar-thumb {
     background: #07d5f0;
     border-radius: 10px;
+}
+
+/* Новый заголовок-разделитель */
+.section-header {
+    font-size: 20px;
+    font-weight: bold;
+    color: #ffffff;
+    padding: 10px 0;
+    position: relative;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Линия-разделитель под заголовком */
+.section-header::after {
+    content: "";
+    display: block;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, #ff3366, #ff6b6b, #4834d4, #686de0);
+    margin-top: 5px;
 }
