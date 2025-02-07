@@ -149,6 +149,8 @@ function sendTrainingDataToAPI($userId, $trainingData) {
         "trainings" => $trainingData
     ], JSON_UNESCAPED_UNICODE);
 
+    echo $payload;
+
     // Инициализируем cURL
     $ch = curl_init($apiUrl);
 
@@ -162,6 +164,7 @@ function sendTrainingDataToAPI($userId, $trainingData) {
     // Выполняем запрос
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    
 
     curl_close($ch);
 
@@ -169,8 +172,6 @@ function sendTrainingDataToAPI($userId, $trainingData) {
     if ($httpCode !== 200) {
         error_log("Ошибка отправки тренировки: " . $response);
     }
-
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "GET");
 }
 
 // Форма обработки добавления новой тренировки
