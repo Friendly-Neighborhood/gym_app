@@ -88,24 +88,49 @@ $recommendations = !empty($client['recommendations']) ? json_decode($client['rec
 $nutrition_recommendation = $recommendations['nutrition_recommendation'] ?? '';
 $training_recommendation = $recommendations['training_recommendation'] ?? '';
 
-// Handle recommendation save
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_recommendations'])) {
-    $nutrition_recommendation = $conn->real_escape_string($_POST['nutrition_recommendation']);
-    $training_recommendation = $conn->real_escape_string($_POST['training_recommendation']);
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_nutrition_recommendations'])) {
+    $new_aim = $conn->real_escape_string($_POST['aim']);
+    $new_basal = (int)$_POST['metabolism_basal'];
+    $new_maintenance = (int)$_POST['metabolism_maintenance'];
+    $new_bulking = (int)$_POST['metabolism_bulking'];
+    $new_cutting = (int)$_POST['metabolism_cutting'];
 
-    $recommendations_json = json_encode([
-        "nutrition_recommendation" => $nutrition_recommendation,
-        "training_recommendation" => $training_recommendation
+    // Преобразуем БЖУ в decimal с одной цифрой после запятой
+    $new_proteins = isset($_POST['proteins']) ? number_format((float)$_POST['proteins'], 1, '.', '') : "0.0";
+    $new_fats = isset($_POST['fats']) ? number_format((float)$_POST['fats'], 1, '.', '') : "0.0";
+    $new_carbohydrates = isset($_POST['carbohydrates']) ? number_format((float)$_POST['carbohydrates'], 1, '.', '') : "0.0";
+
+    $new_other_recommendations = $conn->real_escape_string($_POST['other_recommendations']);
+    $new_training_recommendations = $conn->real_escape_string($_POST['training_recommendations']);
+
+    // Обновленная JSON-структура
+    $updated_nutrition_data = json_encode([
+        "training_recommendation" => $new_training_recommendations,
+        "nutrition_recommendation" => [
+            "aim" => $new_aim,
+            "metabolism" => [
+                "basal" => $new_basal,
+                "maintenance" => $new_maintenance,
+                "bulking" => $new_bulking,
+                "cutting" => $new_cutting
+            ],
+            "nutrients_per_kg" => [
+                "proteins" => $new_proteins,
+                "fats" => $new_fats,
+                "carbohydrates" => $new_carbohydrates
+            ],
+            "other_recommendations" => $new_other_recommendations
+        ]
     ], JSON_UNESCAPED_UNICODE);
 
-    // ✅ Добавляем SQL-запрос
-    $sql_update_recommendations = "UPDATE user_info SET recommendations = '$recommendations_json' WHERE tg_id = $client_id";
+    // Запрос на обновление в БД
+    $sql_update_nutrition = "UPDATE user_info SET recommendations = '$updated_nutrition_data' WHERE tg_id = $client_id";
 
-    if ($conn->query($sql_update_recommendations) === TRUE) {
+    if ($conn->query($sql_update_nutrition) === TRUE) {
         header("Location: details.php?tg_id=$client_id&updated=true");
         exit();
     } else {
-        echo "<p>Ошибка обновления рекомендаций: " . $conn->error . "</p>";
+        echo "<p>Ошибка обновления: " . $conn->error . "</p>";
     }
 }
 
