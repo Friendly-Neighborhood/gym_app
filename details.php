@@ -113,7 +113,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_recommendations']
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_training'])) {
     // Получаем переданные данные
     $selected_muscles = isset($_POST['muscle_group']) ? json_decode($_POST['muscle_group'], true) : [];
-    
+
     // Проверяем, что список не пустой
     if (!empty($selected_muscles)) {
         // Получаем текущие тренировки из БД
@@ -122,7 +122,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_training'])) {
         $row_fetch = $result_fetch->fetch_assoc();
         $existing_trainings = !empty($row_fetch['trainings']) ? json_decode($row_fetch['trainings'], true) : [];
 
-
+        // Создаём новую тренировку
         $new_training = [
             "date" => date("Y-m-d"),
             "muscle_group" => $selected_muscles
@@ -134,6 +134,55 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_training'])) {
         $sql_update = "UPDATE user_info SET trainings = '$updated_trainings_json' WHERE tg_id = $client_id";
 
         if ($conn->query($sql_update) === TRUE) {
+            // Отправляем данные в API
+            sendTrainingDataToAPI($client_id, $new_training);
+
+            // Перенаправляем с уведомлением
+            header("Location: details.php?tg_id=$client_id&training_added=true");
+            exit();
+        } else {
+            echo "<p>Ошибка сохранения тренировки: " . $conn->error . "</p>";
+        }
+    } else {
+        echo "<p>Выберите хотя бы одну группу мышц!</p>";
+    }
+}
+// Получаем текущие тренировки
+$sql_fetch_trainings = "SELECT trainings FROM user_info WHERE tg_id = $client_id";
+$result_fetch_trainings = $conn->query($sql_fetch_trainings);
+$row_fetch_trainings = $result_fetch_trainings->fetch_assoc();
+$trainings = !empty($row_fetch_trainings['trainings']) ? json_decode($row_fetch_trainings['trainings'], true) : [];
+
+
+// Форма обработки добавления новой тренировки
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_training'])) {
+    // Получаем переданные данные
+    $selected_muscles = isset($_POST['muscle_group']) ? json_decode($_POST['muscle_group'], true) : [];
+
+    // Проверяем, что список не пустой
+    if (!empty($selected_muscles)) {
+        // Получаем текущие тренировки из БД
+        $sql_fetch = "SELECT trainings FROM user_info WHERE tg_id = $client_id";
+        $result_fetch = $conn->query($sql_fetch);
+        $row_fetch = $result_fetch->fetch_assoc();
+        $existing_trainings = !empty($row_fetch['trainings']) ? json_decode($row_fetch['trainings'], true) : [];
+
+        // Создаём новую тренировку
+        $new_training = [
+            "date" => date("Y-m-d"),
+            "muscle_group" => $selected_muscles
+        ];
+        $existing_trainings[] = $new_training;
+
+        // Обновляем БД
+        $updated_trainings_json = json_encode($existing_trainings, JSON_UNESCAPED_UNICODE);
+        $sql_update = "UPDATE user_info SET trainings = '$updated_trainings_json' WHERE tg_id = $client_id";
+
+        if ($conn->query($sql_update) === TRUE) {
+            // Отправляем данные в API
+            sendTrainingDataToAPI($client_id, $new_training);
+
+            // Перенаправляем с уведомлением
             header("Location: details.php?tg_id=$client_id&training_added=true");
             exit();
         } else {
@@ -144,54 +193,38 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_training'])) {
     }
 }
 
-// Получаем текущие тренировки
-$sql_fetch_trainings = "SELECT trainings FROM user_info WHERE tg_id = $client_id";
-$result_fetch_trainings = $conn->query($sql_fetch_trainings);
-$row_fetch_trainings = $result_fetch_trainings->fetch_assoc();
-$trainings = !empty($row_fetch_trainings['trainings']) ? json_decode($row_fetch_trainings['trainings'], true) : [];
+// Функция для отправки данных в API
+function sendTrainingDataToAPI($userId, $trainingData) {
+    $apiUrl = "http://gym-bot.site:3001/api/training_added";
+    
+    // Формируем JSON-объект
+    $payload = json_encode([
+        "userId" => (string)$userId,
+        "trainings" => $trainingData
+    ], JSON_UNESCAPED_UNICODE);
 
+    // Инициализируем cURL
+    $ch = curl_init($apiUrl);
 
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_nutrition_recommendations'])) {
-    $new_aim = $conn->real_escape_string($_POST['aim']);
-    $new_basal = (int)$_POST['metabolism_basal'];
-    $new_maintenance = (int)$_POST['metabolism_maintenance'];
-    $new_bulking = (int)$_POST['metabolism_bulking'];
-    $new_cutting = (int)$_POST['metabolism_cutting'];
-    $new_proteins = (int)$_POST['proteins'];
-    $new_fats = (int)$_POST['fats'];
-    $new_carbohydrates = (int)$_POST['carbohydrates'];
-    $new_other_recommendations = $conn->real_escape_string($_POST['other_recommendations']);
-    $new_training_recommendations = $conn->real_escape_string($_POST['training_recommendations']);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "Content-Type: application/json"
+    ]);
 
-    // Структура JSON
-    $updated_nutrition_data = json_encode([
-        "training_recommendation" => $new_training_recommendations,
-        "nutrition_recommendation" => [
-        "aim" => $new_aim,
-        "metabolism" => [
-            "basal" => $new_basal,
-            "maintenance" => $new_maintenance,
-            "bulking" => $new_bulking,
-            "cutting" => $new_cutting
-        ],
-        "nutrients_per_kg" => [
-            "proteins" => $new_proteins,
-            "fats" => $new_fats,
-            "carbohydrates" => $new_carbohydrates
-        ],
-        "other_recommendations" => $new_other_recommendations
-    ]], JSON_UNESCAPED_UNICODE);
+    // Выполняем запрос
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-    // Запрос на обновление в БД
-    $sql_update_nutrition = "UPDATE user_info SET recommendations = '$updated_nutrition_data' WHERE tg_id = $client_id";
+    curl_close($ch);
 
-    if ($conn->query($sql_update_nutrition) === TRUE) {
-        header("Location: details.php?tg_id=$client_id&updated=true");
-        exit();
-    } else {
-        echo "<p>Ошибка обновления: " . $conn->error . "</p>";
+    // Логирование ошибки, если запрос не успешен
+    if ($httpCode !== 200) {
+        error_log("Ошибка отправки тренировки: " . $response);
     }
 }
+
 
 
 
@@ -374,25 +407,27 @@ $nutrition_data = $nutrition_data ?? []; // Если null, заменяем на
         <i class="fa fa-arrow-down"></i>
     </div>
 
-    <!-- БЖУ -->
-    <div class="section-header">БЖУ</div>
-    <div class="input-group">
-        <input type="text" id="proteins" name="proteins" value="<?php echo htmlspecialchars($recommendations['nutrition_recommendation']['nutrients_per_kg']['proteins'] ?? 0); ?>">
-        <label>Белки (г/кг)</label>
-        <i class="fa fa-egg"></i>
-    </div>
+<!-- БЖУ -->
+<div class="section-header">БЖУ</div>
+<div class="input-group">
+    <input type="number" step="0.1" id="proteins" name="proteins" value="<?php echo number_format($recommendations['nutrition_recommendation']['nutrients_per_kg']['proteins'] ?? 0, 1, '.', ''); ?>">
+    <label>Белки (г/кг)</label>
+    <i class="fa fa-egg"></i>
+</div>
 
-    <div class="input-group">
-        <input type="text" id="fats" name="fats" value="<?php echo htmlspecialchars($recommendations['nutrition_recommendation']['nutrients_per_kg']['fats'] ?? 0); ?>">
-        <label>Жиры (г/кг)</label>
-        <i class="fa fa-tint"></i>
-    </div>
+<div class="input-group">
+    <input type="number" step="0.1" id="fats" name="fats" value="<?php echo number_format($recommendations['nutrition_recommendation']['nutrients_per_kg']['fats'] ?? 0, 1, '.', ''); ?>">
+    <label>Жиры (г/кг)</label>
+    <i class="fa fa-tint"></i>
+</div>
 
-    <div class="input-group">
-        <input type="text" id="carbohydrates" name="carbohydrates" value="<?php echo htmlspecialchars($recommendations['nutrition_recommendation']['nutrients_per_kg']['carbohydrates'] ?? 0); ?>">
-        <label>Углеводы (г/кг)</label>
-        <i class="fa fa-bread-slice"></i>
-    </div>
+<div class="input-group">
+    <input type="number" step="0.1" id="carbohydrates" name="carbohydrates" value="<?php echo number_format($recommendations['nutrition_recommendation']['nutrients_per_kg']['carbohydrates'] ?? 0, 1, '.', ''); ?>">
+    <label>Углеводы (г/кг)</label>
+    <i class="fa fa-bread-slice"></i>
+</div>
+
+
 
     <!-- Поле "Другие рекомендации" -->
     <div class="section-header">Дополнительно</div>
@@ -777,6 +812,7 @@ let selectedViewType = "meals"; // По умолчанию "по приёмам 
         label.style.display = "block"; // Показываем label, если пусто
     }
     }
+
 
     // Загружаем таблицу по умолчанию
     window.onload = function() {
