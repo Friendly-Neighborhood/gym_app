@@ -160,7 +160,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_training'])) {
 
         if ($conn->query($sql_update) === TRUE) {
             // Отправляем данные в API
-            sendTrainingDataToAPI($client_id, $new_training);
+            //sendTrainingDataToAPI($client_id, $new_training);
 
             // Перенаправляем с уведомлением
             header("Location: details.php?tg_id=$client_id&training_added=true");
