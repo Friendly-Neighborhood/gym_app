@@ -357,7 +357,7 @@ $nutrition_data = $nutrition_data ?? []; // Если null, заменяем на
     <div class="section-header">Цель</div>
     <div class="input-group required">
         <select name="aim" id="aim">
-            <option value="Снижение веса" <?php echo ($recommendations['aim'] ?? '') == "Снижение веса" ? "selected" : ""; ?>>Снижение</option>
+            <option value="Снижение" <?php echo ($recommendations['aim'] ?? '') == "Снижение" ? "selected" : ""; ?>>Снижение</option>
             <option value="Поддержание" <?php echo ($recommendations['aim'] ?? '') == "Поддержание" ? "selected" : ""; ?>>Поддержание</option>
             <option value="Набор" <?php echo ($recommendations['aim'] ?? '') == "Набор" ? "selected" : ""; ?>>Набор</option>
         </select>
