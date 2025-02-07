@@ -149,8 +149,6 @@ function sendTrainingDataToAPI($userId, $trainingData) {
         "trainings" => $trainingData
     ], JSON_UNESCAPED_UNICODE);
 
-    echo $payload;
-
     // Инициализируем cURL
     $ch = curl_init($apiUrl);
 
