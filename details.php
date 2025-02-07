@@ -169,6 +169,8 @@ function sendTrainingDataToAPI($userId, $trainingData) {
     if ($httpCode !== 200) {
         error_log("Ошибка отправки тренировки: " . $response);
     }
+
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "GET");
 }
 
 // Форма обработки добавления новой тренировки
