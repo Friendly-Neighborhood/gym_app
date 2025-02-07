@@ -134,12 +134,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_nutrition_recomme
     }
 }
 
-// Получаем текущие тренировки
-$sql_fetch_trainings = "SELECT trainings FROM user_info WHERE tg_id = $client_id";
-$result_fetch_trainings = $conn->query($sql_fetch_trainings);
-$row_fetch_trainings = $result_fetch_trainings->fetch_assoc();
-$trainings = !empty($row_fetch_trainings['trainings']) ? json_decode($row_fetch_trainings['trainings'], true) : [];
-
 // Форма обработки добавления новой тренировки
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_training'])) {
     // Получаем переданные данные
