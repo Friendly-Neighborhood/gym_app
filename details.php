@@ -134,91 +134,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_nutrition_recomme
     }
 }
 
-// Форма обработки добавления новой тренировки
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_training'])) {
-    // Получаем переданные данные
-    $selected_muscles = isset($_POST['muscle_group']) ? json_decode($_POST['muscle_group'], true) : [];
-
-    // Проверяем, что список не пустой
-    if (!empty($selected_muscles)) {
-        // Получаем текущие тренировки из БД
-        $sql_fetch = "SELECT trainings FROM user_info WHERE tg_id = $client_id";
-        $result_fetch = $conn->query($sql_fetch);
-        $row_fetch = $result_fetch->fetch_assoc();
-        $existing_trainings = !empty($row_fetch['trainings']) ? json_decode($row_fetch['trainings'], true) : [];
-
-        // Создаём новую тренировку
-        $new_training = [
-            "date" => date("Y-m-d"),
-            "muscle_group" => $selected_muscles
-        ];
-        $existing_trainings[] = $new_training;
-
-        // Обновляем БД
-        $updated_trainings_json = json_encode($existing_trainings, JSON_UNESCAPED_UNICODE);
-        $sql_update = "UPDATE user_info SET trainings = '$updated_trainings_json' WHERE tg_id = $client_id";
-
-        if ($conn->query($sql_update) === TRUE) {
-            // Отправляем данные в API
-            sendTrainingDataToAPI($client_id, $new_training);
-
-            // Перенаправляем с уведомлением
-            header("Location: details.php?tg_id=$client_id&training_added=true");
-            exit();
-        } else {
-            echo "<p>Ошибка сохранения тренировки: " . $conn->error . "</p>";
-        }
-    } else {
-        echo "<p>Выберите хотя бы одну группу мышц!</p>";
-    }
-}
 // Получаем текущие тренировки
 $sql_fetch_trainings = "SELECT trainings FROM user_info WHERE tg_id = $client_id";
 $result_fetch_trainings = $conn->query($sql_fetch_trainings);
 $row_fetch_trainings = $result_fetch_trainings->fetch_assoc();
 $trainings = !empty($row_fetch_trainings['trainings']) ? json_decode($row_fetch_trainings['trainings'], true) : [];
 
-
-// Форма обработки добавления новой тренировки
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_training'])) {
-    // Получаем переданные данные
-    $selected_muscles = isset($_POST['muscle_group']) ? json_decode($_POST['muscle_group'], true) : [];
-
-    // Проверяем, что список не пустой
-    if (!empty($selected_muscles)) {
-        // Получаем текущие тренировки из БД
-        $sql_fetch = "SELECT trainings FROM user_info WHERE tg_id = $client_id";
-        $result_fetch = $conn->query($sql_fetch);
-        $row_fetch = $result_fetch->fetch_assoc();
-        $existing_trainings = !empty($row_fetch['trainings']) ? json_decode($row_fetch['trainings'], true) : [];
-
-        // Создаём новую тренировку
-        $new_training = [
-            "date" => date("Y-m-d"),
-            "muscle_group" => $selected_muscles
-        ];
-        $existing_trainings[] = $new_training;
-
-        // Обновляем БД
-        $updated_trainings_json = json_encode($existing_trainings, JSON_UNESCAPED_UNICODE);
-        $sql_update = "UPDATE user_info SET trainings = '$updated_trainings_json' WHERE tg_id = $client_id";
-
-        if ($conn->query($sql_update) === TRUE) {
-            // Отправляем данные в API
-            sendTrainingDataToAPI($client_id, $new_training);
-
-            // Перенаправляем с уведомлением
-            header("Location: details.php?tg_id=$client_id&training_added=true");
-            exit();
-        } else {
-            echo "<p>Ошибка сохранения тренировки: " . $conn->error . "</p>";
-        }
-    } else {
-        echo "<p>Выберите хотя бы одну группу мышц!</p>";
-    }
-}
-
-// Функция для отправки данных в API
 function sendTrainingDataToAPI($userId, $trainingData) {
     $apiUrl = "http://gym-bot.site:3001/api/training_added";
     
@@ -250,8 +171,44 @@ function sendTrainingDataToAPI($userId, $trainingData) {
     }
 }
 
+// Форма обработки добавления новой тренировки
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_training'])) {
+    // Получаем переданные данные
+    $selected_muscles = isset($_POST['muscle_group']) ? json_decode($_POST['muscle_group'], true) : [];
 
+    // Проверяем, что список не пустой
+    if (!empty($selected_muscles)) {
+        // Получаем текущие тренировки из БД
+        $sql_fetch = "SELECT trainings FROM user_info WHERE tg_id = $client_id";
+        $result_fetch = $conn->query($sql_fetch);
+        $row_fetch = $result_fetch->fetch_assoc();
+        $existing_trainings = !empty($row_fetch['trainings']) ? json_decode($row_fetch['trainings'], true) : [];
 
+        // Создаём новую тренировку
+        $new_training = [
+            "date" => date("Y-m-d"),
+            "muscle_group" => $selected_muscles
+        ];
+        $existing_trainings[] = $new_training;
+
+        // Обновляем БД
+        $updated_trainings_json = json_encode($existing_trainings, JSON_UNESCAPED_UNICODE);
+        $sql_update = "UPDATE user_info SET trainings = '$updated_trainings_json' WHERE tg_id = $client_id";
+
+        if ($conn->query($sql_update) === TRUE) {
+            // Отправляем данные в API
+            sendTrainingDataToAPI($client_id, $new_training);
+
+            // Перенаправляем с уведомлением
+            header("Location: details.php?tg_id=$client_id&training_added=true");
+            exit();
+        } else {
+            echo "<p>Ошибка сохранения тренировки: " . $conn->error . "</p>";
+        }
+    } else {
+        echo "<p>Выберите хотя бы одну группу мышц!</p>";
+    }
+}
 
 $vitamin_data = $vitamin_data ?? [];
 $nutrition_data = $nutrition_data ?? []; // Если null, заменяем на []
