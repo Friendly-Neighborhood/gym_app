@@ -174,7 +174,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_training'])) {
 }
 
 function sendTrainingDataToAPI($userId, $trainingData) {
-    $apiUrl = "https://webhook.site/313d1862-7203-4a5b-bdd1-f1c25d90a331";
+    $apiUrl = "http://gym-bot.site:3001/api/training_added";
     
     // Формируем JSON-объект
     $payload = json_encode([
