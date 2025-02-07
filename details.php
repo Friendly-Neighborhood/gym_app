@@ -160,7 +160,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_training'])) {
 
         if ($conn->query($sql_update) === TRUE) {
             // Отправляем данные в API
-            //sendTrainingDataToAPI($client_id, $new_training);
+            sendTrainingDataToAPI($client_id, $new_training);
 
             // Перенаправляем с уведомлением
             header("Location: details.php?tg_id=$client_id&training_added=true");
@@ -185,6 +185,8 @@ function sendTrainingDataToAPI($userId, $trainingData) {
     // Инициализируем cURL
     $ch = curl_init($apiUrl);
 
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
     curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
