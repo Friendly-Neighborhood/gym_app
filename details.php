@@ -152,7 +152,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_training'])) {
             "date" => date("Y-m-d"),
             "muscle_group" => $selected_muscles
         ];
-        $existing_trainings[] = $new_training;
+
+        // Добавляем новую тренировку **в начало** массива
+        array_unshift($existing_trainings, $new_training);
 
         // Обновляем БД
         $updated_trainings_json = json_encode($existing_trainings, JSON_UNESCAPED_UNICODE);
@@ -172,6 +174,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_training'])) {
         echo "<p>Выберите хотя бы одну группу мышц!</p>";
     }
 }
+
 
 function sendTrainingDataToAPI($userId, $trainingData) {
     $apiUrl = "http://gym-bot.site:3001/api/training_added";
