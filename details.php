@@ -141,7 +141,7 @@ $row_fetch_trainings = $result_fetch_trainings->fetch_assoc();
 $trainings = !empty($row_fetch_trainings['trainings']) ? json_decode($row_fetch_trainings['trainings'], true) : [];
 
 function sendTrainingDataToAPI($userId, $trainingData) {
-    $apiUrl = "http://gym-bot.site:3001/api/training_added";
+    $apiUrl = "https://webhook.site/313d1862-7203-4a5b-bdd1-f1c25d90a331";
     
     // Формируем JSON-объект
     $payload = json_encode([
