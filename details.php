@@ -196,6 +196,11 @@ function sendTrainingDataToAPI($userId, $trainingData) {
 
     // Выполняем запрос
     $response = curl_exec($ch);
+if ($response === false) {
+    error_log("Ошибка cURL: " . curl_error($ch)); // Логируем ошибку
+} else {
+    error_log("Ответ сервера: " . $response);
+}
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     
 
