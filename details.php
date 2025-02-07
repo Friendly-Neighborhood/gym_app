@@ -140,38 +140,6 @@ $result_fetch_trainings = $conn->query($sql_fetch_trainings);
 $row_fetch_trainings = $result_fetch_trainings->fetch_assoc();
 $trainings = !empty($row_fetch_trainings['trainings']) ? json_decode($row_fetch_trainings['trainings'], true) : [];
 
-function sendTrainingDataToAPI($userId, $trainingData) {
-    $apiUrl = "https://webhook.site/313d1862-7203-4a5b-bdd1-f1c25d90a331";
-    
-    // Формируем JSON-объект
-    $payload = json_encode([
-        "userId" => (string)$userId,
-        "trainings" => $trainingData
-    ], JSON_UNESCAPED_UNICODE);
-
-    // Инициализируем cURL
-    $ch = curl_init($apiUrl);
-
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        "Content-Type: application/json"
-    ]);
-
-    // Выполняем запрос
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    
-
-    curl_close($ch);
-
-    // Логирование ошибки, если запрос не успешен
-    if ($httpCode !== 200) {
-        error_log("Ошибка отправки тренировки: " . $response);
-    }
-}
-
 // Форма обработки добавления новой тренировки
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_training'])) {
     // Получаем переданные данные
@@ -208,6 +176,38 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_training'])) {
         }
     } else {
         echo "<p>Выберите хотя бы одну группу мышц!</p>";
+    }
+}
+
+function sendTrainingDataToAPI($userId, $trainingData) {
+    $apiUrl = "https://webhook.site/313d1862-7203-4a5b-bdd1-f1c25d90a331";
+    
+    // Формируем JSON-объект
+    $payload = json_encode([
+        "userId" => (string)$userId,
+        "trainings" => $trainingData
+    ], JSON_UNESCAPED_UNICODE);
+
+    // Инициализируем cURL
+    $ch = curl_init($apiUrl);
+
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "Content-Type: application/json"
+    ]);
+
+    // Выполняем запрос
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    
+
+    curl_close($ch);
+
+    // Логирование ошибки, если запрос не успешен
+    if ($httpCode !== 200) {
+        error_log("Ошибка отправки тренировки: " . $response);
     }
 }
 
