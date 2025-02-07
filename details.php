@@ -357,9 +357,9 @@ $nutrition_data = $nutrition_data ?? []; // Если null, заменяем на
     <div class="section-header">Цель</div>
     <div class="input-group required">
         <select name="aim" id="aim">
-            <option value="Снижение" <?php echo ($recommendations['aim'] ?? '') == "Снижение" ? "selected" : ""; ?>>Снижение</option>
-            <option value="Поддержание" <?php echo ($recommendations['aim'] ?? '') == "Поддержание" ? "selected" : ""; ?>>Поддержание</option>
-            <option value="Набор" <?php echo ($recommendations['aim'] ?? '') == "Набор" ? "selected" : ""; ?>>Набор</option>
+            <option value="Снижение веса" <?php echo ($recommendations['aim'] ?? '') == "Снижение веса" ? "selected" : ""; ?>>Снижение веса</option>
+            <option value="Поддержание веса" <?php echo ($recommendations['aim'] ?? '') == "Поддержание веса" ? "selected" : ""; ?>>Поддержание веса</option>
+            <option value="Набор веса" <?php echo ($recommendations['aim'] ?? '') == "Набор веса" ? "selected" : ""; ?>>Набор веса</option>
         </select>
         <label for="aim">Цель</label>
         <i class="fa fa-check-circle"></i>
@@ -381,13 +381,13 @@ $nutrition_data = $nutrition_data ?? []; // Если null, заменяем на
 
     <div class="input-group">
         <input type="text" id="metabolism_bulking" name="metabolism_bulking" value="<?php echo htmlspecialchars($recommendations['nutrition_recommendation']['metabolism']['bulking'] ?? 0); ?>">
-        <label>Набор массы (ккал)</label>
+        <label>Набор (ккал)</label>
         <i class="fa fa-arrow-up"></i>
     </div>
 
     <div class="input-group">
         <input type="text" id="metabolism_cutting" name="metabolism_cutting" value="<?php echo htmlspecialchars($recommendations['nutrition_recommendation']['metabolism']['cutting'] ?? 0); ?>">
-        <label>Снижение веса (ккал)</label>
+        <label>Снижение (ккал)</label>
         <i class="fa fa-arrow-down"></i>
     </div>
 
