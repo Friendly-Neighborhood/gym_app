@@ -15,7 +15,7 @@ if ($conn->connect_error) {
 }
 
 // Fetch clients
-$sql = "SELECT tg_id, personal_info FROM user_info";
+$sql = "SELECT tg_id, personal_info, active_till FROM user_info";
 $result = $conn->query($sql);
 ?>
 
@@ -49,28 +49,37 @@ $result = $conn->query($sql);
         <tr>
             <th>ID телеграмма</th>
             <th>Имя клиента</th>
+            <th>Активен до</th>
             <th>Детали</th>
         </tr>
         <?php
+        $current_time = date("Y-m-d H:i:s"); // Текущее время
+
         if ($result->num_rows > 0) {
             while ($row = $result->fetch_assoc()) {
-                echo "<tr>";
-                echo "<td>" . $row["tg_id"] . "</td>";  // Display Telegram ID
-                
-                // Decode JSON and extract full_name
+                $active_till = $row["active_till"] ?? "Неизвестно";
+                $is_active = ($active_till > $current_time); // Проверяем активен ли юзер
+
+                echo "<tr" . ($is_active ? "" : " style='background-color:rgb(248, 83, 83);'") . ">"; // Красный фон если неактивен
+                echo "<td>" . $row["tg_id"] . "</td>";
+
+                // Имя пользователя
                 $personal_info = json_decode($row["personal_info"], true);
-                $full_name = isset($personal_info["full_name"]) ? $personal_info["full_name"] : "Имя не добавлено";
-                
-                echo "<td>" . htmlspecialchars($full_name) . "</td>";  // Display Full Name
+                $full_name = $personal_info["full_name"] ?? "Имя не добавлено";
+                echo "<td>" . htmlspecialchars($full_name) . "</td>";
+
+                // Активность
+                echo "<td>" . htmlspecialchars($active_till) . "</td>";
+
+                // Ссылка на детали с возможностью продления
                 echo "<td><a href='details.php?tg_id=" . $row["tg_id"] . "' class='button details-button'>🔍 Детали</a></td>";
                 echo "</tr>";          
             }
         } else {
-            echo "<tr><td colspan='3'>No clients found</td></tr>";
+            echo "<tr><td colspan='4'>Нет клиентов</td></tr>";
         }
         ?>
     </table>
-    
 </body>
 </html>
 <?php

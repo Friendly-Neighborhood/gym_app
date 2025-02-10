@@ -175,7 +175,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_training'])) {
     }
 }
 
-
 function sendTrainingDataToAPI($userId, $trainingData) {
     $apiUrl = "http://gym-bot.site:3001/api/training_added";
     
@@ -214,6 +213,79 @@ if ($response === false) {
         error_log("Ошибка отправки тренировки: " . $response);
     }
 }
+
+// Получаем текущую дату подписки
+$active_till = $client['active_till'] ?? null;
+
+// Проверяем, просрочена ли подписка
+$is_expired = (!$active_till || strtotime($active_till) < time()) ? true : false;
+
+// Форма продления подписки
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['extend_subscription'])) {
+    $extend_days = (int)$_POST['subscription_days'];
+
+    if ($extend_days > 0) {
+        // Если подписка уже истекла, начинаем отсчет с текущей даты
+        if ($is_expired) {
+            $new_active_till = date("Y-m-d H:i:s", strtotime("+$extend_days days"));
+        } else {
+            $new_active_till = date("Y-m-d H:i:s", strtotime($active_till . " + $extend_days days"));
+        }
+
+        // Обновляем подписку в БД
+        $sql_update_subscription = "UPDATE user_info SET active_till = '$new_active_till' WHERE tg_id = $client_id";
+
+        if ($conn->query($sql_update_subscription) === TRUE) {
+            header("Location: details.php?tg_id=$client_id&subscription_updated=true");
+            exit();
+        } else {
+            echo "<p>Ошибка обновления подписки: " . $conn->error . "</p>";
+        }
+    }
+}
+
+// Обработка удаления записи из таблицы приёмов пищи
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_food'])) {
+    $food_date = $conn->real_escape_string($_POST['food_date']);
+    $food_name = $conn->real_escape_string($_POST['food_name']);
+
+    // Получаем текущие данные
+    $sql_fetch = "SELECT nutritional_info FROM user_info WHERE tg_id = $client_id";
+    $result_fetch = $conn->query($sql_fetch);
+    $row_fetch = $result_fetch->fetch_assoc();
+    $nutrition_data = !empty($row_fetch['nutritional_info']) ? json_decode($row_fetch['nutritional_info'], true) : [];
+
+    // Проверяем, есть ли данные за эту дату
+    if (isset($nutrition_data[$food_date])) {
+        foreach ($nutrition_data[$food_date] as $index => $food) {
+            if ($food['food_item'] === $food_name) {
+                unset($nutrition_data[$food_date][$index]);
+                if (empty($nutrition_data[$food_date])) {
+                    unset($nutrition_data[$food_date]); // Удаляем дату, если нет записей
+                }
+                break;
+            }
+        }
+    }
+
+    // Если после удаления в `nutritional_info` не осталось данных, записываем NULL
+    if (empty($nutrition_data)) {
+        $sql_update_nutrition = "UPDATE user_info SET nutritional_info = NULL WHERE tg_id = $client_id";
+    } else {
+        $updated_nutrition_data = json_encode($nutrition_data, JSON_UNESCAPED_UNICODE);
+        $sql_update_nutrition = "UPDATE user_info SET nutritional_info = '$updated_nutrition_data' WHERE tg_id = $client_id";
+    }
+
+    if ($conn->query($sql_update_nutrition) === TRUE) {
+        // Перенаправляем, добавляя параметр food_deleted для показа уведомления
+        header("Location: details.php?tg_id=$client_id&food_deleted=true");
+        exit();
+    } else {
+        echo "<p>Ошибка удаления: " . $conn->error . "</p>";
+    }
+}
+
+
 
 $vitamin_data = $vitamin_data ?? [];
 $nutrition_data = $nutrition_data ?? []; // Если null, заменяем на []
@@ -259,6 +331,56 @@ $nutrition_data = $nutrition_data ?? []; // Если null, заменяем на
 </head>
 <body>
     <div class="container">
+
+<div class="subscription-status">
+    <p><strong>Подписка активна до:</strong> 
+        <span class="<?= $is_expired ? 'expired' : 'active' ?>">
+            <?= $active_till ? date("d.m.Y H:i", strtotime($active_till)) : "Неизвестно" ?>
+        </span>
+    </p>
+
+    <?php if ($is_expired): ?>
+        <p class="expired-text">⚠ Подписка истекла! Продлите её.</p>
+    <?php endif; ?>
+</div>
+
+<!-- Форма продления подписки -->
+<form method="POST" class="extend-subscription-form">
+<div class="input-group">
+    <select name="subscription_days" id="subscription_days" required>
+        <option value="7">7 дней</option>
+        <option value="14">14 дней</option>
+        <option value="30">30 дней</option>
+    </select>
+    <i class="fa fa-check-circle"></i>
+    </div>
+    <button type="submit" name="extend_subscription" class="btn save-btn">🔄 Продлить</button>
+</form>
+
+    <!-- Блок уведомлений -->
+    <?php if (isset($_GET['food_deleted'])): ?>
+        <div id="notification" class="notification">✅ Запись успешно удалена!</div>
+        <script>
+            setTimeout(function() {
+                let notification = document.getElementById("notification");
+                if (notification) {
+                    notification.style.opacity = "0";
+                    setTimeout(() => { notification.style.display = "none"; }, 500);
+                }
+
+                // Убираем параметр из URL после показа уведомления
+                let url = new URL(window.location.href);
+                url.searchParams.delete("food_deleted");
+                window.history.replaceState({}, document.title, url);
+            }, 5000);
+        </script>
+    <?php endif; ?>
+
+    <?php if (isset($_GET['subscription_updated'])): ?>
+        <div id="notification" class="notification">✅ Подписка успешно продлена!</div>
+    <?php endif; ?>
+
+    <br></br>
     <h1 class="page-banner">Персональная информация</h1>
 
     <?php if (isset($_GET['updated'])): ?>
@@ -636,34 +758,69 @@ let selectedViewType = "meals"; // По умолчанию "по приёмам 
     }
 
     function renderMealsTable() {
-        let tbody = document.getElementById("nutritionTable").querySelector("tbody");
-        let thead = document.getElementById("nutritionTable").querySelector("thead");
-        thead.innerHTML = `
-            <tr>
-                <th>Дата</th>
-                <th>Блюдо</th>
-                <th>Протеины</th>
-                <th>Жиры</th>
-                <th>Углеводы</th>
-                <th>Калорийность</th>
-            </tr>`;
+    let tbody = document.getElementById("nutritionTable").querySelector("tbody");
+    let thead = document.getElementById("nutritionTable").querySelector("thead");
 
-        <?php
-        krsort($nutrition_data);
-        foreach ($nutrition_data as $date => $foods) {
-            foreach ($foods as $food) {
-                echo "tbody.innerHTML += `<tr>
-                    <td>" . htmlspecialchars($date) . "</td>
-                    <td>" . htmlspecialchars($food['food_item'] ?? 'Нет данных') . "</td>
-                    <td>" . htmlspecialchars($food['proteins'] ?? 0) . " г</td>
-                    <td>" . htmlspecialchars($food['fats'] ?? 0) . " г</td>
-                    <td>" . htmlspecialchars($food['carbohydrates'] ?? 0) . " г</td>
-                    <td>" . htmlspecialchars($food['calories'] ?? 0) . " ккал</td>
-                </tr>`;";
-            }
-        }
-        ?>
+    // Обновляем заголовок таблицы
+    thead.innerHTML = `
+    <tr>
+        <th>Дата</th>
+        <th>Блюдо</th>
+        <th>Протеины</th>
+        <th>Жиры</th>
+        <th>Углеводы</th>
+        <th>Калорийность</th>
+        <th>Действие</th>
+    </tr>`;
+
+    tbody.innerHTML = ""; // Очищаем таблицу перед обновлением
+
+    // Передаем данные из PHP в JavaScript
+    let nutritionData = <?php echo json_encode($nutrition_data, JSON_UNESCAPED_UNICODE); ?>;
+
+    if (!nutritionData || typeof nutritionData !== "object") {
+        console.error("Ошибка: nutritionData не является объектом", nutritionData);
+        return;
     }
+
+    // Перебираем даты (отсортированные по убыванию)
+    let sortedDates = Object.keys(nutritionData).sort((a, b) => new Date(b) - new Date(a));
+
+    sortedDates.forEach(date => {
+        let foods = Object.values(nutritionData[date]); // Преобразуем объект в массив
+
+
+        // Проверяем, является ли `foods` массивом
+        if (!Array.isArray(foods)) {
+            console.warn(`Предупреждение: Данные за ${date} не являются массивом`, foods);
+            return;
+        }
+
+        foods.forEach(food => {
+            let row = document.createElement("tr");
+
+            row.innerHTML = `
+                <td>${date}</td>
+                <td>${food.food_item ?? 'Неизвестно'}</td>
+                <td>${food.proteins ?? 0} г</td>
+                <td>${food.fats ?? 0} г</td>
+                <td>${food.carbohydrates ?? 0} г</td>
+                <td>${food.calories ?? 0} ккал</td>
+                <td>
+                    <form method="POST" style="display: contents; margin: 0; padding: 0;">
+                        <input type="hidden" name="food_date" value="${date}">
+                        <input type="hidden" name="food_name" value="${food.food_item}">
+                        <button type="submit" name="delete_food" class="btn delete-btn"><span class="button-content">Удалить</span></button>
+                    </form>
+                </td>
+            `;
+
+            tbody.appendChild(row);
+        });
+    });
+}
+
+
 
     function renderDaysTable() {
         let tbody = document.getElementById("nutritionTable").querySelector("tbody");
