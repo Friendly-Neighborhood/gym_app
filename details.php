@@ -222,14 +222,16 @@ $is_expired = (!$active_till || strtotime($active_till) < time()) ? true : false
 
 // Форма продления подписки
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['extend_subscription'])) {
-    $extend_days = (int)$_POST['subscription_days'];
+    $new_active_till = $_POST['subscription_date'];
 
-    if ($extend_days > 0) {
-        // Если подписка уже истекла, начинаем отсчет с текущей даты
-        if ($is_expired) {
-            $new_active_till = date("Y-m-d H:i:s", strtotime("+$extend_days days"));
+    if (!empty($new_active_till)) {
+        $sql_update_subscription = "UPDATE user_info SET active_till = '$new_active_till' WHERE tg_id = $client_id";
+    
+        if ($conn->query($sql_update_subscription) === TRUE) {
+            header("Location: details.php?tg_id=$client_id&subscription_updated=true");
+            exit();
         } else {
-            $new_active_till = date("Y-m-d H:i:s", strtotime($active_till . " + $extend_days days"));
+            echo "<p>Ошибка обновления подписки: " . $conn->error . "</p>";
         }
 
         // Обновляем подписку в БД
@@ -285,6 +287,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_food'])) {
     }
 }
 
+// Отмена подписки (ставим дату подписки на вчера)
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['cancel_subscription'])) {
+    $yesterday = date("Y-m-d H:i:s", strtotime("-1 day"));
+
+    $sql_cancel_subscription = "UPDATE user_info SET active_till = '$yesterday' WHERE tg_id = $client_id";
+
+    if ($conn->query($sql_cancel_subscription) === TRUE) {
+        header("Location: details.php?tg_id=$client_id&subscription_cancelled=true");
+        exit();
+    } else {
+        echo "<p>Ошибка отмены подписки: " . $conn->error . "</p>";
+    }
+}
 
 
 $vitamin_data = $vitamin_data ?? [];
@@ -332,30 +347,32 @@ $nutrition_data = $nutrition_data ?? []; // Если null, заменяем на
 <body>
     <div class="container">
 
-<div class="subscription-status">
-    <p><strong>Подписка активна до:</strong> 
-        <span class="<?= $is_expired ? 'expired' : 'active' ?>">
+    <div class="subscription-block">
+    <div class="subscription-info">
+        <strong>Подписка активна до:</strong>
+        <div class="subscription-status-box <?= $is_expired ? 'status-expired' : 'status-active' ?>">
             <?= $active_till ? date("d.m.Y H:i", strtotime($active_till)) : "Неизвестно" ?>
-        </span>
-    </p>
+        </div>
+        <?php if ($is_expired): ?>
+            <p class="subscription-warning">⚠ Подписка истекла! Продлите её.</p>
+        <?php endif; ?>
+    </div>
 
-    <?php if ($is_expired): ?>
-        <p class="expired-text">⚠ Подписка истекла! Продлите её.</p>
-    <?php endif; ?>
+    <!-- Форма продления подписки -->
+    <form method="POST" class="subscription-actions">
+        <label for="d" class="subscription-label">Выберите новую дату окончания подписки:</label>
+        <div class="input-group required">
+            <input id="d" type="text" name="subscription_date" class="subscription-date-picker" readonly onclick="calender(this)">
+            <i class="fa fa-calendar-alt"></i>
+        </div>
+
+        <div class="subscription-buttons">
+            <button type="submit" name="extend_subscription" class="btn btn-extend">🔄 Продлить</button>
+            <button type="submit" name="cancel_subscription" class="btn btn-cancel">❌ Отменить подписку</button>
+        </div>
+    </form>
 </div>
 
-<!-- Форма продления подписки -->
-<form method="POST" class="extend-subscription-form">
-<div class="input-group">
-    <select name="subscription_days" id="subscription_days" required>
-        <option value="7">7 дней</option>
-        <option value="14">14 дней</option>
-        <option value="30">30 дней</option>
-    </select>
-    <i class="fa fa-check-circle"></i>
-    </div>
-    <button type="submit" name="extend_subscription" class="btn save-btn">🔄 Продлить</button>
-</form>
 
     <!-- Блок уведомлений -->
     <?php if (isset($_GET['food_deleted'])): ?>
@@ -375,6 +392,23 @@ $nutrition_data = $nutrition_data ?? []; // Если null, заменяем на
             }, 5000);
         </script>
     <?php endif; ?>
+
+    <?php if (isset($_GET['subscription_cancelled'])): ?>
+    <div id="notification" class="notification">⚠ Подписка отменена!</div>
+    <script>
+        setTimeout(function() {
+            let notification = document.getElementById("notification");
+            if (notification) {
+                notification.style.opacity = "0";
+                setTimeout(() => { notification.style.display = "none"; }, 500);
+            }
+            let url = new URL(window.location.href);
+            url.searchParams.delete("subscription_cancelled");
+            window.history.replaceState({}, document.title, url);
+        }, 5000);
+    </script>
+<?php endif; ?>
+
 
     <?php if (isset($_GET['subscription_updated'])): ?>
         <div id="notification" class="notification">✅ Подписка успешно продлена!</div>
@@ -957,6 +991,117 @@ let selectedViewType = "meals"; // По умолчанию "по приёмам 
     }
     }
 
+    function calender(e) {
+    if (document.getElementById("calenderMain")) {
+        document.getElementById("calenderMain").remove();
+        return;
+    }
+
+    let date = new Date();
+    let currMonth = date.getMonth();
+    let currYear = date.getFullYear();
+
+    let monthArray = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+
+    let cal = `<div id="calenderMain">
+        <div class="overlay"></div> <!-- Фон, чтобы ловить клики вне календаря -->
+        <div class="main">
+            <div class="close-btn" onclick="closeCalender()">✖</div> <!-- Кнопка закрытия -->
+            <div class="yearDiv">
+                <span class="left" onclick="changeYear(-1)">❮</span>
+                <span id="year">${currYear}</span>
+                <span class="right" onclick="changeYear(1)">❯</span>
+            </div>
+            <div class="monthDiv">
+                <span class="left" onclick="changeMonth(-1)">❮</span>
+                <span id="month">${monthArray[currMonth]}</span>
+                <span class="right" onclick="changeMonth(1)">❯</span>
+            </div>
+            <table id="fillDate">
+                <tr class="weekT">
+                    <td class="wDay">Пн</td><td class="wDay">Вт</td><td class="wDay">Ср</td>
+                    <td class="wDay">Чт</td><td class="wDay">Пт</td><td class="wDay">Сб</td><td class="wDay">Вс</td>
+                </tr>
+            </table>
+        </div>
+    </div>`;
+
+    document.body.insertAdjacentHTML('beforeend', cal);
+    document.querySelector(".main").style.display = "block";
+
+    window.currentMonth = currMonth;
+    window.currentYear = currYear;
+    window.targetInput = e;
+
+    // Добавляем событие для закрытия при клике вне календаря
+    document.querySelector(".overlay").addEventListener("click", closeCalender);
+
+    setCalender(currMonth, currYear);
+}
+
+function setCalender(month, year) {
+    let days = [];
+    let date = new Date(year, month, 1);
+    let monthArray = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+
+    document.getElementById("month").innerText = monthArray[month];
+    document.getElementById("year").innerText = year;
+
+    let fillDate = document.getElementById("fillDate");
+    fillDate.querySelectorAll("tr:not(.weekT)").forEach(row => row.remove());
+
+    while (date.getMonth() === month) {
+        days.push(new Date(date));
+        date.setDate(date.getDate() + 1);
+    }
+
+    let row = document.createElement("tr");
+    fillDate.appendChild(row);
+
+    for (let i = 0; i < days[0].getDay() - 1; i++) {
+        row.appendChild(document.createElement("td"));
+    }
+
+    days.forEach(day => {
+        if (day.getDay() === 1 && row.children.length > 0) {
+            row = document.createElement("tr");
+            fillDate.appendChild(row);
+        }
+        let cell = document.createElement("td");
+        cell.innerText = day.getDate();
+        cell.classList.add("date");
+        cell.onclick = function() {
+            let selectedDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+            window.targetInput.value = selectedDate;
+            closeCalender(); // Закрываем календарь после выбора
+        };
+        row.appendChild(cell);
+    });
+}
+
+function changeMonth(step) {
+    window.currentMonth += step;
+    if (window.currentMonth < 0) {
+        window.currentMonth = 11;
+        window.currentYear--;
+    } else if (window.currentMonth > 11) {
+        window.currentMonth = 0;
+        window.currentYear++;
+    }
+    setCalender(window.currentMonth, window.currentYear);
+}
+
+function changeYear(step) {
+    window.currentYear += step;
+    setCalender(window.currentMonth, window.currentYear);
+}
+
+function closeCalender() {
+    let calenderEl = document.getElementById("calenderMain");
+    if (calenderEl) {
+        calenderEl.remove();
+    }
+}
 
     // Загружаем таблицу по умолчанию
     window.onload = function() {

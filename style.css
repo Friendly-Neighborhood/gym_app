@@ -1087,3 +1087,150 @@ button:focus-visible {
     outline: none !important;
     box-shadow: none !important;
 }
+
+#calenderMain {
+    position: fixed;
+    height: 100%;
+    width: 100%;
+    top: 0;
+    left: 0;
+    z-index: 10000;
+}
+
+.overlay {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.main {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 350px;
+    background: #007bff;
+    color: white;
+    text-align: center;
+    padding: 10px;
+    border-radius: 8px;
+    z-index: 10001;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.close-btn {
+    position: absolute;
+    right: 1px;
+    top: -5px;
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: bold;
+    color: white;
+}
+
+.close-btn:hover {
+    color: red;
+}
+
+.yearDiv, .monthDiv {
+    display: flex;
+    justify-content: space-between;
+    font-size: 20px;
+    padding: 10px;
+}
+
+.left, .right {
+    cursor: pointer;
+    font-size: 24px;
+}
+
+.weekT td, .date {
+    padding: 8px;
+    cursor: pointer;
+    color: white;
+}
+
+.date:hover {
+    background: white;
+    color: #007bff;
+    font-weight: bold;
+}
+
+.button-group {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.cancel-btn {
+    background: #ff4d4d;
+    color: white;
+}
+
+.cancel-btn:hover {
+    background: #cc0000;
+}
+
+.subscription-warning {
+    color: #ff4d4d;
+    font-size: 17px;
+    margin-top: 5px;
+}
+
+.subscription-info p {
+    margin: 0;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.subscription-status-box {
+    display: inline-block;
+    padding: 8px 15px;
+    border-radius: 5px;
+    font-weight: bold;
+    margin: 10px 0;
+}
+
+.status-active {
+    background: #4CAF50;
+    color: white;
+}
+
+.status-expired {
+    background: #ff4d4d;
+    color: white;
+}
+
+.subscription-date-picker {
+    border: none;
+    outline: none;
+    font-size: 16px;
+    flex: 1;
+    text-align: center;
+    width: 99%;
+}
+
+.subscription-buttons {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.btn-extend {
+    background: #007bff;
+    color: white;
+}
+
+.btn-extend:hover {
+    background: #0056b3;
+}
+
+.btn-cancel {
+    background: #ff4d4d;
+    color: white;
+}
+
+.btn-cancel:hover {
+    background: #cc0000;
+}

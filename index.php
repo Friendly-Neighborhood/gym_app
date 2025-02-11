@@ -34,7 +34,6 @@ $result = $conn->query($sql);
         </ul>
     </div>
 </nav>
-<div class="overlay"></div>
 
 <head>
     <meta charset="UTF-8">
