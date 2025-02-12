@@ -29,6 +29,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_changes'])) {
     $new_weight = (int)$_POST['weight'];
     $new_gender = $conn->real_escape_string($_POST['gender']);
     $new_additional_info = $conn->real_escape_string($_POST['additional_info']);
+    $new_lang = $conn->real_escape_string($_POST['lang']);
 
     // Fetch and decode existing personal_info
     $sql_fetch = "SELECT personal_info FROM user_info WHERE tg_id = $client_id";
@@ -42,6 +43,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_changes'])) {
     $personal_info['height'] = $new_height;
     $personal_info['weight'] = $new_weight;
     $personal_info['sex'] = $new_gender;
+    $personal_info['lang'] = $new_lang;
     $personal_info['additional_info'] = $new_additional_info;
 
     // Encode back to JSON and update database
@@ -79,6 +81,7 @@ $height = $personal_info['height'] ?? 'Не указан';
 $weight = $personal_info['weight'] ?? 'Не указан';
 $gender = $personal_info['sex'] ?? 'Не указан';
 $additional_info = $personal_info['additional_info'];
+$lang = $personal_info['lang'] ?? 'Не указан';
 
 // Decode `nutritional_info`
 $nutrition_data = !empty($client['nutritional_info']) ? json_decode($client['nutritional_info'], true) : [];
@@ -454,6 +457,16 @@ $nutrition_data = $nutrition_data ?? []; // Если null, заменяем на
             <option value="female" <?php echo ($gender == 'female') ? 'selected' : ''; ?>>Женский</option>
         </select>
         <label for="gender">Пол</label>
+        <i class="fa fa-check-circle"></i>
+    </div>
+
+    <div class="input-group required">
+        <select name="lang" id="lang" required>
+            <option value="en" <?php echo ($lang == 'en') ? 'selected' : ''; ?>>en</option>
+            <option value="ru" <?php echo ($lang == 'ru') ? 'selected' : ''; ?>>ru</option>
+            <option value="ua" <?php echo ($lang == 'ua') ? 'selected' : ''; ?>>ua</option>
+        </select>
+        <label for="lang">Язык</label>
         <i class="fa fa-check-circle"></i>
     </div>
 
