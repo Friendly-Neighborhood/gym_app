@@ -464,7 +464,7 @@ $nutrition_data = $nutrition_data ?? []; // Если null, заменяем на
         <select name="lang" id="lang" required>
             <option value="en" <?php echo ($lang == 'en') ? 'selected' : ''; ?>>en</option>
             <option value="ru" <?php echo ($lang == 'ru') ? 'selected' : ''; ?>>ru</option>
-            <option value="ua" <?php echo ($lang == 'ua') ? 'selected' : ''; ?>>ua</option>
+            <option value="uk" <?php echo ($lang == 'uk') ? 'selected' : ''; ?>>uk</option>
         </select>
         <label for="lang">Язык</label>
         <i class="fa fa-check-circle"></i>
