@@ -375,7 +375,7 @@ $nutrition_data = $nutrition_data ?? []; // Если null, заменяем на
 
         <div class="subscription-buttons">
             <button type="submit" name="extend_subscription" class="btn btn-extend">🔄 Продлить</button>
-            <button type="submit" name="cancel_subscription" class="btn btn-cancel">❌ Отменить подписку</button>
+            <button type="submit" name="cancel_subscription" class="btn btn-cancel">Отменить подписку</button>
         </div>
     </form>
 </div>
@@ -1024,6 +1024,7 @@ let selectedViewType = "meals"; // По умолчанию "по приёмам 
         <div class="overlay"></div> <!-- Фон, чтобы ловить клики вне календаря -->
         <div class="main">
             <div class="close-btn" onclick="closeCalender()">✖</div> <!-- Кнопка закрытия -->
+            <br></br>
             <div class="yearDiv">
                 <span class="left" onclick="changeYear(-1)">❮</span>
                 <span id="year">${currYear}</span>

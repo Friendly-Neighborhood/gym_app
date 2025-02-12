@@ -1113,51 +1113,102 @@ button:focus-visible {
     background: rgba(0, 0, 0, 0.5);
 }
 
+/* Главное окно */
 .main {
     position: absolute;
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    width: 350px;
-    background: #007bff;
+    width: 380px;
+    background: rgba(0, 153, 255, 0.9);
+    backdrop-filter: blur(10px);
     color: white;
     text-align: center;
-    padding: 10px;
-    border-radius: 8px;
+    padding: 20px;
+    border-radius: 14px;
     z-index: 10001;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    opacity: 1;
 }
 
+/* Анимация появления */
+.main.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.main.hide {
+    opacity: 0;
+    transform: translate(-50%, -45%) scale(0.95);
+}
+
+/* Кнопка закрытия */
 .close-btn {
     position: absolute;
-    right: 1px;
-    top: -5px;
+    right: 15px;
+    top: 15px;
     cursor: pointer;
     font-size: 20px;
     font-weight: bold;
     color: white;
+    background: rgba(255, 255, 255, 0.3);
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.3s ease, transform 0.2s ease;
 }
 
 .close-btn:hover {
-    color: red;
+    background: rgba(255, 255, 255, 0.5);
+    transform: scale(1.2);
 }
 
+/* Верхние блоки (год и месяц) */
 .yearDiv, .monthDiv {
     display: flex;
     justify-content: space-between;
-    font-size: 20px;
-    padding: 10px;
+    align-items: center;
+    font-size: 22px;
+    background: linear-gradient(135deg, #0099ff, #0066cc);
+    font-weight: bold;
+    padding: 14px 22px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15);
+    transition: background 0.3s ease, transform 0.2s ease;
 }
 
+.yearDiv:hover, .monthDiv:hover {
+    background: linear-gradient(135deg, #4aaeff, #0080ff);
+    transform: scale(1.02);
+}
+
+/* Кнопки переключения */
 .left, .right {
     cursor: pointer;
-    font-size: 24px;
+    font-size: 26px;
+    font-weight: bold;
+    padding: 8px 18px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.2);
+    transition: background 0.3s ease, transform 0.2s ease;
 }
 
+.left:hover, .right:hover {
+    background: rgba(255, 255, 255, 0.4);
+    transform: scale(1.1);
+}
+
+/* Таблица с днями недели и датами */
 .weekT td, .date {
-    padding: 8px;
+    padding: 10px;
     cursor: pointer;
     color: white;
+    font-size: 16px;
+    transition: background 0.3s ease, color 0.3s ease;
 }
 
 .date:hover {
@@ -1165,6 +1216,7 @@ button:focus-visible {
     color: #007bff;
     font-weight: bold;
 }
+
 
 .button-group {
     display: flex;
