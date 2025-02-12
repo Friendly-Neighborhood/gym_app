@@ -148,7 +148,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_training'])) {
         $sql_fetch = "SELECT trainings FROM user_info WHERE tg_id = $client_id";
         $result_fetch = $conn->query($sql_fetch);
         $row_fetch = $result_fetch->fetch_assoc();
-        $existing_trainings = !empty($row_fetch['trainings']) ? json_decode($row_fetch['trainings'], true) : [];
+
+        // Преобразуем NULL в пустой массив
+        $existing_trainings = (!empty($row_fetch['trainings']) && $row_fetch['trainings'] !== 'null') 
+            ? json_decode($row_fetch['trainings'], true) 
+            : [];
 
         // Создаём новую тренировку
         $new_training = [
@@ -156,7 +160,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_training'])) {
             "muscle_group" => $selected_muscles
         ];
 
-        // Добавляем новую тренировку **в начало** массива
+        // Добавляем новую тренировку в начало массива
         array_unshift($existing_trainings, $new_training);
 
         // Обновляем БД
