@@ -228,12 +228,11 @@ input:focus, textarea:focus {
   /* ✅ Запрещаем изменение размера по ширине */
   .no-resize {
     resize: vertical; /* Можно растягивать только вверх/вниз */
-    width: 1343px; /* Уменьшаем начальную ширину */
 }
+
 .textarea-group {
     position: relative;
-    width: 100%;
-    max-width: 400px; /* Максимальная ширина */
+    width: 99%;
 }
 
 
@@ -383,13 +382,24 @@ input:focus, textarea:focus {
 }
 
 /* === Стиль input и select === */
-.input-group input,
-.input-group select {
+.input-group input{
     width: 98%;
     height: 30px; /* Унифицированная высота */
     border-radius: 4px;
     border: 2px solid #444;
     padding: 6px 14px; /* Уменьшенные отступы */
+    font-size: 14px;
+    background-color: #1e1e2f;
+    color: #f1f1f1;
+    outline: none;
+    transition: border 0.3s, box-shadow 0.3s, background-color 0.3s;
+}
+.input-group select {
+    width: 98%;
+    box-sizing: content-box;  
+    border-radius: 4px;
+    border: 2px solid #444;
+    padding: 0.00000001px 14px; /* Уменьшенные отступы */
     font-size: 14px;
     background-color: #1e1e2f;
     color: #f1f1f1;
@@ -405,8 +415,7 @@ input:focus, textarea:focus {
 /* === Исправленный select (пол) по высоте === */
 .input-group select:focus,
 .input-group select:valid {
-    height: 45px; 
-    width: 1363px;
+    height: 45px
 }
 
 /* === Анимация при фокусе === */
