@@ -253,44 +253,59 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['extend_subscription'])
     }
 }
 
-// Обработка удаления записи из таблицы приёмов пищи
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_food'])) {
     $food_date = $conn->real_escape_string($_POST['food_date']);
     $food_name = $conn->real_escape_string($_POST['food_name']);
-
+    
     // Получаем текущие данные
     $sql_fetch = "SELECT nutritional_info FROM user_info_test WHERE tg_id = $client_id";
     $result_fetch = $conn->query($sql_fetch);
     $row_fetch = $result_fetch->fetch_assoc();
     $nutrition_data = !empty($row_fetch['nutritional_info']) ? json_decode($row_fetch['nutritional_info'], true) : [];
 
+    $mealId = null;
+
     // Проверяем, есть ли данные за эту дату
     if (isset($nutrition_data[$food_date])) {
         foreach ($nutrition_data[$food_date] as $index => $food) {
             if ($food['food_item'] === $food_name) {
-                unset($nutrition_data[$food_date][$index]);
-                if (empty($nutrition_data[$food_date])) {
-                    unset($nutrition_data[$food_date]); // Удаляем дату, если нет записей
-                }
+                $mealId = $food['meal_id'] ?? null; // Предполагается, что meal_id есть в данных
                 break;
             }
         }
     }
 
-    // Если после удаления в `nutritional_info` не осталось данных, записываем NULL
-    if (empty($nutrition_data)) {
-        $sql_update_nutrition = "UPDATE user_info_test SET nutritional_info = NULL WHERE tg_id = $client_id";
-    } else {
-        $updated_nutrition_data = json_encode($nutrition_data, JSON_UNESCAPED_UNICODE);
-        $sql_update_nutrition = "UPDATE user_info_test SET nutritional_info = '$updated_nutrition_data' WHERE tg_id = $client_id";
-    }
+    if ($mealId) {
+        // Формируем данные для API-запроса
+        $apiData = json_encode([
+            "userId" => (string) $client_id,
+            "date" => $food_date,
+            "mealId" => (string) $mealId
+        ], JSON_UNESCAPED_UNICODE);
 
-    if ($conn->query($sql_update_nutrition) === TRUE) {
-        // Перенаправляем, добавляя параметр food_deleted для показа уведомления
-        header("Location: details.php?tg_id=$client_id&food_deleted=true");
-        exit();
+        // Отправляем запрос на API
+        $apiUrl = "http://gym-bot.site:3001/api/delete_meal";
+        $ch = curl_init($apiUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $apiData);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            "Content-Type: application/json"
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode == 200) {
+            // Перенаправляем с параметром успешного удаления
+            header("Location: details.php?tg_id=$client_id&food_deleted=true");
+            exit();
+        } else {
+            echo "<p>Ошибка удаления через API: " . htmlspecialchars($response) . "</p>";
+        }
     } else {
-        echo "<p>Ошибка удаления: " . $conn->error . "</p>";
+        echo "<p>Ошибка: не найден идентификатор приема пищи.</p>";
     }
 }
 
