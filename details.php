@@ -253,10 +253,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['extend_subscription'])
     }
 }
 
-// Обработка удаления записи из таблицы приёмов пищи
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_food'])) {
     $food_date = $conn->real_escape_string($_POST['food_date']);
-    $food_name = $conn->real_escape_string($_POST['food_name']);
+    $food_index = intval($_POST['food_index']); // Получаем индекс записи
 
     // Получаем текущие данные
     $sql_fetch = "SELECT nutritional_info FROM user_info WHERE tg_id = $client_id";
@@ -264,20 +263,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_food'])) {
     $row_fetch = $result_fetch->fetch_assoc();
     $nutrition_data = !empty($row_fetch['nutritional_info']) ? json_decode($row_fetch['nutritional_info'], true) : [];
 
-    // Проверяем, есть ли данные за эту дату
-    if (isset($nutrition_data[$food_date])) {
-        foreach ($nutrition_data[$food_date] as $index => $food) {
-            if ($food['food_item'] === $food_name) {
-                unset($nutrition_data[$food_date][$index]);
-                if (empty($nutrition_data[$food_date])) {
-                    unset($nutrition_data[$food_date]); // Удаляем дату, если нет записей
-                }
-                break;
-            }
+    if (isset($nutrition_data[$food_date][$food_index])) {
+        unset($nutrition_data[$food_date][$food_index]);
+        $nutrition_data[$food_date] = array_values($nutrition_data[$food_date]); // Пересортировка индексов
+
+        if (empty($nutrition_data[$food_date])) {
+            unset($nutrition_data[$food_date]);
         }
     }
 
-    // Если после удаления в `nutritional_info` не осталось данных, записываем NULL
     if (empty($nutrition_data)) {
         $sql_update_nutrition = "UPDATE user_info SET nutritional_info = NULL WHERE tg_id = $client_id";
     } else {
@@ -286,13 +280,54 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_food'])) {
     }
 
     if ($conn->query($sql_update_nutrition) === TRUE) {
-        // Перенаправляем, добавляя параметр food_deleted для показа уведомления
         header("Location: details.php?tg_id=$client_id&food_deleted=true");
         exit();
     } else {
         echo "<p>Ошибка удаления: " . $conn->error . "</p>";
     }
 }
+
+
+// // Обработка удаления записи из таблицы приёмов пищи
+// if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_food'])) {
+//     $food_date = $conn->real_escape_string($_POST['food_date']);
+//     $food_name = $conn->real_escape_string($_POST['food_name']);
+
+//     // Получаем текущие данные
+//     $sql_fetch = "SELECT nutritional_info FROM user_info WHERE tg_id = $client_id";
+//     $result_fetch = $conn->query($sql_fetch);
+//     $row_fetch = $result_fetch->fetch_assoc();
+//     $nutrition_data = !empty($row_fetch['nutritional_info']) ? json_decode($row_fetch['nutritional_info'], true) : [];
+
+//     // Проверяем, есть ли данные за эту дату
+//     if (isset($nutrition_data[$food_date])) {
+//         foreach ($nutrition_data[$food_date] as $index => $food) {
+//             if ($food['food_item'] === $food_name) {
+//                 unset($nutrition_data[$food_date][$index]);
+//                 if (empty($nutrition_data[$food_date])) {
+//                     unset($nutrition_data[$food_date]); // Удаляем дату, если нет записей
+//                 }
+//                 break;
+//             }
+//         }
+//     }
+
+//     // Если после удаления в `nutritional_info` не осталось данных, записываем NULL
+//     if (empty($nutrition_data)) {
+//         $sql_update_nutrition = "UPDATE user_info SET nutritional_info = NULL WHERE tg_id = $client_id";
+//     } else {
+//         $updated_nutrition_data = json_encode($nutrition_data, JSON_UNESCAPED_UNICODE);
+//         $sql_update_nutrition = "UPDATE user_info SET nutritional_info = '$updated_nutrition_data' WHERE tg_id = $client_id";
+//     }
+
+//     if ($conn->query($sql_update_nutrition) === TRUE) {
+//         // Перенаправляем, добавляя параметр food_deleted для показа уведомления
+//         header("Location: details.php?tg_id=$client_id&food_deleted=true");
+//         exit();
+//     } else {
+//         echo "<p>Ошибка удаления: " . $conn->error . "</p>";
+//     }
+// }
 
 // Отмена подписки (ставим дату подписки на вчера)
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['cancel_subscription'])) {
@@ -812,7 +847,6 @@ let selectedViewType = "meals"; // По умолчанию "по приёмам 
     let tbody = document.getElementById("nutritionTable").querySelector("tbody");
     let thead = document.getElementById("nutritionTable").querySelector("thead");
 
-    // Обновляем заголовок таблицы
     thead.innerHTML = `
     <tr>
         <th>Дата</th>
@@ -824,9 +858,8 @@ let selectedViewType = "meals"; // По умолчанию "по приёмам 
         <th>Действие</th>
     </tr>`;
 
-    tbody.innerHTML = ""; // Очищаем таблицу перед обновлением
+    tbody.innerHTML = "";
 
-    // Передаем данные из PHP в JavaScript
     let nutritionData = <?php echo json_encode($nutrition_data, JSON_UNESCAPED_UNICODE); ?>;
 
     if (!nutritionData || typeof nutritionData !== "object") {
@@ -834,20 +867,17 @@ let selectedViewType = "meals"; // По умолчанию "по приёмам 
         return;
     }
 
-    // Перебираем даты (отсортированные по убыванию)
     let sortedDates = Object.keys(nutritionData).sort((a, b) => new Date(b) - new Date(a));
 
     sortedDates.forEach(date => {
-        let foods = Object.values(nutritionData[date]); // Преобразуем объект в массив
+        let foods = Object.values(nutritionData[date]);
 
-
-        // Проверяем, является ли `foods` массивом
         if (!Array.isArray(foods)) {
             console.warn(`Предупреждение: Данные за ${date} не являются массивом`, foods);
             return;
         }
 
-        foods.forEach(food => {
+        foods.forEach((food, index) => {
             let row = document.createElement("tr");
 
             row.innerHTML = `
@@ -860,16 +890,79 @@ let selectedViewType = "meals"; // По умолчанию "по приёмам 
                 <td>
                     <form method="POST" style="display: contents; margin: 0; padding: 0;">
                         <input type="hidden" name="food_date" value="${date}">
-                        <input type="hidden" name="food_name" value="${food.food_item}">
+                        <input type="hidden" name="food_index" value="${index}">
                         <button type="submit" name="delete_food" class="btn delete-btn"><span class="button-content">Удалить</span></button>
                     </form>
                 </td>
             `;
-
             tbody.appendChild(row);
         });
     });
 }
+
+
+//     function renderMealsTable() {
+//     let tbody = document.getElementById("nutritionTable").querySelector("tbody");
+//     let thead = document.getElementById("nutritionTable").querySelector("thead");
+
+//     // Обновляем заголовок таблицы
+//     thead.innerHTML = `
+//     <tr>
+//         <th>Дата</th>
+//         <th>Блюдо</th>
+//         <th>Протеины</th>
+//         <th>Жиры</th>
+//         <th>Углеводы</th>
+//         <th>Калорийность</th>
+//         <th>Действие</th>
+//     </tr>`;
+
+//     tbody.innerHTML = ""; // Очищаем таблицу перед обновлением
+
+//     // Передаем данные из PHP в JavaScript
+//     let nutritionData = <?php echo json_encode($nutrition_data, JSON_UNESCAPED_UNICODE); ?>;
+
+//     if (!nutritionData || typeof nutritionData !== "object") {
+//         console.error("Ошибка: nutritionData не является объектом", nutritionData);
+//         return;
+//     }
+
+//     // Перебираем даты (отсортированные по убыванию)
+//     let sortedDates = Object.keys(nutritionData).sort((a, b) => new Date(b) - new Date(a));
+
+//     sortedDates.forEach(date => {
+//         let foods = Object.values(nutritionData[date]); // Преобразуем объект в массив
+
+
+//         // Проверяем, является ли `foods` массивом
+//         if (!Array.isArray(foods)) {
+//             console.warn(`Предупреждение: Данные за ${date} не являются массивом`, foods);
+//             return;
+//         }
+
+//         foods.forEach(food => {
+//             let row = document.createElement("tr");
+
+//             row.innerHTML = `
+//                 <td>${date}</td>
+//                 <td>${food.food_item ?? 'Неизвестно'}</td>
+//                 <td>${food.proteins ?? 0} г</td>
+//                 <td>${food.fats ?? 0} г</td>
+//                 <td>${food.carbohydrates ?? 0} г</td>
+//                 <td>${food.calories ?? 0} ккал</td>
+//                 <td>
+//                     <form method="POST" style="display: contents; margin: 0; padding: 0;">
+//                         <input type="hidden" name="food_date" value="${date}">
+//                         <input type="hidden" name="food_name" value="${food.food_item}">
+//                         <button type="submit" name="delete_food" class="btn delete-btn"><span class="button-content">Удалить</span></button>
+//                     </form>
+//                 </td>
+//             `;
+
+//             tbody.appendChild(row);
+//         });
+//     });
+// }
 
 
 
